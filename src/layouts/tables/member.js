@@ -120,7 +120,7 @@ function GroupMembersManagement() {
       }
 
       const data = await response.json();
-      if (data.status && data.groupMembers) {
+      if (data.groupMembers) {
         setState((prev) => ({
           ...prev,
           groupMembers: data.groupMembers,
@@ -154,7 +154,10 @@ function GroupMembersManagement() {
   );
 
   const columns = [
-    { Header: "User ID", accessor: "userId" },
+    {
+      Header: "User",
+      accessor: (row) => `${row.user?.name || "N/A"} (${row.user?.phoneNumber || "N/A"})`,
+    },
     {
       Header: "Joined At",
       accessor: "joinedAt",

@@ -106,7 +106,7 @@ function SubscriptionOrders() {
       }
 
       const data = await response.json();
-      if (data.status && data.subscriptions) {
+      if (data.subscriptions) {
         setState((prev) => ({
           ...prev,
           subscriptions: data.subscriptions,
@@ -187,18 +187,16 @@ function SubscriptionOrders() {
   const columns = [
     {
       Header: "User",
-      accessor: (row) => {
-        const user = state.users.find((u) => u.id === row.userId);
-        return user ? `${user.name} (${user.email})` : row.userId;
-      },
+      accessor: (row) => `${row.user?.name || "N/A"} (${row.user?.phoneNumber || "N/A"})`,
     },
-    {
-      Header: "Group",
-      accessor: (row) => {
-        const group = state.groups.find((g) => g.id === row.groupId);
-        return group ? group.name : row.groupId;
-      },
-    },
+
+    // {
+    //   Header: "Group",
+    //   accessor: (row) => {
+    //     const group = state.groups.find((g) => g.id === row.groupId);
+    //     return group ? group.name : row.groupId;
+    //   },
+    // },
     {
       Header: "Frequency",
       accessor: "frequency",
@@ -347,15 +345,15 @@ function SubscriptionOrders() {
                 <MDTypography>
                   {(() => {
                     const user = state.users.find(
-                      (u) => u.id === dialogState.currentSubscription.userId
+                      (u) => u.id === dialogState.currentSubscription.user.name
                     );
                     return user
                       ? `${user.name} (${user.email})`
-                      : dialogState.currentSubscription.userId;
+                      : dialogState.currentSubscription.user.name;
                   })()}
                 </MDTypography>
               </Grid>
-              <Grid item xs={12} md={6}>
+              {/* <Grid item xs={12} md={6}>
                 <MDTypography variant="h6">Group:</MDTypography>
                 <MDTypography>
                   {(() => {
@@ -365,7 +363,7 @@ function SubscriptionOrders() {
                     return group ? group.name : dialogState.currentSubscription.groupId;
                   })()}
                 </MDTypography>
-              </Grid>
+              </Grid> */}
               <Grid item xs={12} md={6}>
                 <MDTypography variant="h6">Frequency:</MDTypography>
                 <MDTypography>

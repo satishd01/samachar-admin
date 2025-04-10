@@ -167,7 +167,7 @@ function SubscriptionManagement() {
       }
 
       const data = await response.json();
-      if (data.status && data.subscriptions) {
+      if (data.subscriptions) {
         setState((prev) => ({
           ...prev,
           subscriptions: data.subscriptions,
@@ -210,7 +210,7 @@ function SubscriptionManagement() {
 
   const handleCreateSubscription = async () => {
     if (!validateForm()) {
-      showSnackbar("Please fill all required fields", "error");
+      showSnackbar("Please fill all required fields", "error"); //
       return;
     }
 
