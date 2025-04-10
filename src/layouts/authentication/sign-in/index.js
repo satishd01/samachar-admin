@@ -91,14 +91,16 @@ function Basic() {
       <Card>
         <MDBox
           variant="gradient"
-          bgColor="warning" // Changed to warning (yellow) color
           borderRadius="lg"
-          coloredShadow="warning" // Changed to warning (yellow) color
           mx={2}
           mt={1}
           p={2}
           mb={1}
           textAlign="center"
+          sx={{
+            backgroundColor: "#FFF9C4", // Light yellow
+            boxShadow: "0px 4px 20px rgba(255, 235, 59, 0.4)", // Yellow shadow
+          }}
         >
           <MDBox mb={5}>
             <img
@@ -110,7 +112,7 @@ function Basic() {
               }}
             />
           </MDBox>
-          <MDTypography variant="h4" fontWeight="medium" color="white" mt={1}>
+          <MDTypography variant="h4" fontWeight="medium" color="dark" mt={1}>
             Admin Login
           </MDTypography>
         </MDBox>
@@ -147,7 +149,18 @@ function Basic() {
               </MDTypography>
             </MDBox>
             <MDBox mt={4} mb={1}>
-              <MDButton variant="gradient" color="warning" fullWidth type="submit">
+              <MDButton
+                variant="gradient"
+                fullWidth
+                type="submit"
+                sx={{
+                  backgroundColor: "#FFF176", // Soft yellow
+                  color: "#000",
+                  "&:hover": {
+                    backgroundColor: "#FFEE58",
+                  },
+                }}
+              >
                 Log in
               </MDButton>
             </MDBox>

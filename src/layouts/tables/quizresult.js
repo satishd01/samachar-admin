@@ -16,14 +16,7 @@ import {
   Box,
   Chip,
   Avatar,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Typography,
+  Pagination,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -31,6 +24,7 @@ import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
+import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 
@@ -44,10 +38,17 @@ StatusCell.propTypes = {
 };
 
 const RankCell = ({ value }) => (
-  <Chip label={value || "Not ranked"} color={value ? "primary" : "default"} size="small" />
+  <Chip label={value ? `#${value}` : "N/A"} color={value ? "primary" : "default"} size="small" />
 );
 RankCell.propTypes = {
   value: PropTypes.number,
+};
+
+const RewardCell = ({ value }) => (
+  <Chip label={value ? "Yes" : "No"} color={value ? "success" : "default"} size="small" />
+);
+RewardCell.propTypes = {
+  value: PropTypes.bool.isRequired,
 };
 
 function QuizResults() {
@@ -59,6 +60,8 @@ function QuizResults() {
       participants: [],
     },
     loading: false,
+    currentPage: 1,
+    totalPages: 1,
     snackbar: {
       open: false,
       message: "",
@@ -123,7 +126,7 @@ function QuizResults() {
     }
   };
 
-  const fetchQuizResults = async (quizId) => {
+  const fetchQuizResults = async (quizId, page = 1) => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
       const token = localStorage.getItem("token");
@@ -132,7 +135,7 @@ function QuizResults() {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/api/quizzes/${quizId}/results`, {
+      const response = await fetch(`${BASE_URL}/api/quizzes/${quizId}/results?page=${page}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -149,6 +152,8 @@ function QuizResults() {
           results: data.data,
           selectedQuiz: quizId,
           loading: false,
+          currentPage: page,
+          totalPages: Math.ceil(data.data.participants.length / 10) || 1,
         }));
       } else {
         throw new Error(data.message || "No results found");
@@ -175,6 +180,32 @@ function QuizResults() {
       }));
     }
   };
+
+  const handlePageChange = (event, newPage) => {
+    fetchQuizResults(state.selectedQuiz, newPage);
+  };
+
+  const winnersColumns = [
+    { Header: "Rank", accessor: "rank", Cell: RankCell },
+    {
+      Header: "Participant",
+      accessor: (row) => `${row.user?.name || "Unknown"} (${row.user?.email || "No email"})`,
+    },
+    { Header: "Score", accessor: "totalScore" },
+    { Header: "Correct Answers", accessor: "correctAnswers" },
+    { Header: "Rewarded", accessor: "rewarded", Cell: RewardCell },
+  ];
+
+  const participantsColumns = [
+    {
+      Header: "Participant",
+      accessor: (row) => `${row.user?.name || "Unknown"} (${row.user?.email || "No email"})`,
+    },
+    { Header: "Score", accessor: "totalScore" },
+    { Header: "Correct Answers", accessor: "correctAnswers" },
+    { Header: "Rank", accessor: "rank", Cell: RankCell },
+    { Header: "Rewarded", accessor: "rewarded", Cell: RewardCell },
+  ];
 
   useEffect(() => {
     fetchQuizzes();
@@ -227,6 +258,7 @@ function QuizResults() {
                         value={state.selectedQuiz || ""}
                         label="Select Quiz"
                         onChange={handleQuizChange}
+                        sx={{ width: 300, height: 40 }}
                       >
                         {state.quizzes.map((quiz) => (
                           <MenuItem key={quiz.id} value={quiz.id}>
@@ -256,90 +288,41 @@ function QuizResults() {
                     )}
 
                     {state.results.winners.length > 0 && (
-                      <MDBox px={3} pb={2}>
-                        <MDTypography variant="h6">Winners</MDTypography>
-                        <TableContainer component={Paper}>
-                          <Table>
-                            <TableHead>
-                              <TableRow>
-                                <TableCell>Rank</TableCell>
-                                <TableCell>Participant</TableCell>
-                                <TableCell>Score</TableCell>
-                                <TableCell>Correct Answers</TableCell>
-                                <TableCell>Rewarded</TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {state.results.winners.map((winner) => (
-                                <TableRow key={winner.id}>
-                                  <TableCell>
-                                    <RankCell value={winner.rank} />
-                                  </TableCell>
-                                  <TableCell>
-                                    {winner.user?.name || "Unknown"} ({winner.user?.email})
-                                  </TableCell>
-                                  <TableCell>{winner.totalScore}</TableCell>
-                                  <TableCell>{winner.correctAnswers}</TableCell>
-                                  <TableCell>
-                                    <Chip
-                                      label={winner.rewarded ? "Yes" : "No"}
-                                      color={winner.rewarded ? "success" : "default"}
-                                      size="small"
-                                    />
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
+                      <MDBox px={3} pb={3}>
+                        <MDTypography variant="h6" gutterBottom>
+                          Top Performers
+                        </MDTypography>
+                        <DataTable
+                          table={{ columns: winnersColumns, rows: state.results.winners }}
+                          isSorted={false}
+                          entriesPerPage={false}
+                          showTotalEntries={false}
+                          noEndBorder
+                        />
                       </MDBox>
                     )}
 
                     <MDBox px={3}>
-                      <MDTypography variant="h6">All Participants</MDTypography>
-                      <TableContainer component={Paper}>
-                        <Table>
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>Participant</TableCell>
-                              <TableCell>Score</TableCell>
-                              <TableCell>Correct Answers</TableCell>
-                              <TableCell>Rank</TableCell>
-                              <TableCell>Rewarded</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {state.results.participants.length > 0 ? (
-                              state.results.participants.map((participant) => (
-                                <TableRow key={participant.id}>
-                                  <TableCell>
-                                    {participant.user?.name || "Unknown"} ({participant.user?.email}
-                                    )
-                                  </TableCell>
-                                  <TableCell>{participant.totalScore}</TableCell>
-                                  <TableCell>{participant.correctAnswers}</TableCell>
-                                  <TableCell>
-                                    <RankCell value={participant.rank} />
-                                  </TableCell>
-                                  <TableCell>
-                                    <Chip
-                                      label={participant.rewarded ? "Yes" : "No"}
-                                      color={participant.rewarded ? "success" : "default"}
-                                      size="small"
-                                    />
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            ) : (
-                              <TableRow>
-                                <TableCell colSpan={5} align="center">
-                                  No participants found for this quiz
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
+                      <MDTypography variant="h6" gutterBottom>
+                        All Participants
+                      </MDTypography>
+                      <DataTable
+                        table={{ columns: participantsColumns, rows: state.results.participants }}
+                        isSorted={false}
+                        entriesPerPage={false}
+                        showTotalEntries={false}
+                        noEndBorder
+                      />
+                      {state.totalPages > 1 && (
+                        <MDBox display="flex" justifyContent="center" p={2}>
+                          <Pagination
+                            count={state.totalPages}
+                            page={state.currentPage}
+                            onChange={handlePageChange}
+                            color="primary"
+                          />
+                        </MDBox>
+                      )}
                     </MDBox>
                   </>
                 ) : (
