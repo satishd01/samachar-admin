@@ -3,6 +3,7 @@ import Dashboard from "layouts/dashboard";
 import SignIn from "layouts/authentication/sign-in";
 // @mui icons
 import Icon from "@mui/material/Icon";
+import ArticleIcon from "@mui/icons-material/Article";
 import Users from "layouts/tables/Users";
 import QuizManagement from "layouts/tables/quiz";
 import GroupManagement from "layouts/tables/groups";
@@ -12,6 +13,7 @@ import SubscriptionManagement from "layouts/tables/subscription";
 import WalletHistory from "layouts/tables/wallethistory";
 import SubscriptionOrders from "layouts/tables/orders";
 import QuizResults from "layouts/tables/quizresult";
+import NewsAPIComponent from "layouts/tables/news";
 
 // Define routes
 const routes = [
@@ -54,6 +56,14 @@ const routes = [
     icon: <Icon fontSize="small">group_work</Icon>,
     route: "/group",
     component: <GroupManagement />,
+  },
+  {
+    type: "collapse",
+    name: "News",
+    key: "news",
+    icon: <ArticleIcon fontSize="small" />,
+    route: "/news",
+    component: <NewsAPIComponent />,
   },
   {
     type: "collapse",

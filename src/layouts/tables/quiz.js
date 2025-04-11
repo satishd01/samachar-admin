@@ -554,6 +554,7 @@ function QuizManagement() {
               value={dialogState.addQuestion.formData.correctAnswer}
               onChange={(e) => handleInputChange(e, "addQuestion")}
               label="Correct Answer"
+              sx={{ width: "100%", height: 35 }}
             >
               {dialogState.addQuestion.formData.options.map((option, index) => (
                 <MenuItem key={index} value={index} disabled={!option.trim()}>
