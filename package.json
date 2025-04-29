@@ -20,7 +20,7 @@
     "@mui/lab": "^6.0.0-beta.24",
     "@mui/material": "^5.16.14",
     "@mui/x-date-pickers": "^7.28.3",
-    "axios": "^1.7.9",
+    "axios": "^1.8.4",
     "boostrap": "^2.0.0",
     "bootstrap": "^5.3.3",
     "buffer": "^6.0.3",

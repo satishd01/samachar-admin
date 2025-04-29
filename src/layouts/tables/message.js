@@ -9,13 +9,9 @@ import {
   Grid,
   Card,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Box,
   Chip,
-  Avatar,
+  IconButton,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -24,9 +20,10 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-import { CloudUpload as CloudUploadIcon } from "@mui/icons-material";
+import { CloudUpload as CloudUploadIcon, Download as DownloadIcon } from "@mui/icons-material";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import axios from "axios";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -47,6 +44,7 @@ function GroupsWithMessages() {
       message: "",
       severity: "success",
     },
+    pdfLoading: false,
   });
 
   const [dialogState, setDialogState] = useState({
@@ -55,7 +53,7 @@ function GroupsWithMessages() {
   });
 
   const [formData, setFormData] = useState({
-    image: null,
+    images: Array(5).fill(null),
     timeFrame: "",
     scriptName: "",
     actionType: "",
@@ -140,7 +138,13 @@ function GroupsWithMessages() {
       const token = localStorage.getItem("token");
 
       const formDataToSend = new FormData();
-      formDataToSend.append("image", formData.image);
+
+      formData.images.forEach((image, index) => {
+        if (image) {
+          formDataToSend.append(`image${index + 1}`, image);
+        }
+      });
+
       formDataToSend.append("timeFrame", formData.timeFrame);
       formDataToSend.append("scriptName", formData.scriptName);
       formDataToSend.append("actionType", formData.actionType);
@@ -167,11 +171,10 @@ function GroupsWithMessages() {
       }
 
       const data = await response.json();
-      console.log("Message created successfully:", data);
       if (data) {
         setDialogState((prev) => ({ ...prev, open: false }));
         setFormData({
-          image: null,
+          images: Array(5).fill(null),
           timeFrame: "",
           scriptName: "",
           actionType: "",
@@ -193,9 +196,12 @@ function GroupsWithMessages() {
   const handleInputChange = (e) => {
     const { name, value, type, files } = e.target;
     if (type === "file") {
+      const index = parseInt(name.split("-")[1]);
+      const newImages = [...formData.images];
+      newImages[index] = files[0];
       setFormData((prev) => ({
         ...prev,
-        [name]: files[0],
+        images: newImages,
       }));
     } else {
       setFormData((prev) => ({
@@ -212,6 +218,40 @@ function GroupsWithMessages() {
     });
   };
 
+  const handleDownloadMessages = async (groupId) => {
+    try {
+      setState((prev) => ({ ...prev, pdfLoading: true }));
+      const token = localStorage.getItem("token");
+
+      const response = await axios.get(`${BASE_URL}/api/groups/${groupId}/messages/pdf`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const { pdfUrl } = response.data;
+
+      if (!pdfUrl) {
+        throw new Error("PDF URL not found in response.");
+      }
+
+      // Create a link to trigger download without changing the page URL
+      const link = document.createElement("a");
+      link.href = pdfUrl;
+      link.setAttribute("download", `messages_${groupId}_${Date.now()}.pdf`);
+      link.setAttribute("target", "_blank"); // Optional: opens in new tab if browser blocks download
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setState((prev) => ({ ...prev, pdfLoading: false }));
+    } catch (error) {
+      console.error("Error downloading messages:", error);
+      showSnackbar(error.message || "Error downloading messages", "error");
+      setState((prev) => ({ ...prev, pdfLoading: false }));
+    }
+  };
+
   const columns = [
     { Header: "Group Name", accessor: "name" },
     { Header: "Description", accessor: "description" },
@@ -224,13 +264,23 @@ function GroupsWithMessages() {
       Header: "Actions",
       accessor: "actions",
       Cell: ({ row }) => (
-        <Button
-          variant="contained"
-          color="error"
-          onClick={() => handleOpenCreateDialog(row.original.id)}
-        >
-          Create Message
-        </Button>
+        <Box display="flex" gap={1}>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => handleOpenCreateDialog(row.original.id)}
+            size="small"
+          >
+            Create Message
+          </Button>
+          <IconButton
+            color="primary"
+            onClick={() => handleDownloadMessages(row.original.id)}
+            disabled={state.pdfLoading}
+          >
+            {state.pdfLoading ? <CircularProgress size={24} /> : <DownloadIcon />}
+          </IconButton>
+        </Box>
       ),
     },
   ];
@@ -400,28 +450,41 @@ function GroupsWithMessages() {
                 fullWidth
                 margin="normal"
               />
-              <Box sx={{ mt: 2 }}>
-                <input
-                  accept="image/*"
-                  type="file"
-                  name="image"
-                  onChange={handleInputChange}
-                  style={{ display: "none" }}
-                  id="messageImage"
-                />
-                <label htmlFor="messageImage">
-                  <Button component="span" variant="outlined" startIcon={<CloudUploadIcon />}>
-                    Upload Image
-                  </Button>
-                </label>
-                {formData.image && (
-                  <Chip
-                    label={formData.image.name}
-                    onDelete={() => setFormData((prev) => ({ ...prev, image: null }))}
-                    sx={{ mt: 1 }}
+
+              {/* Multiple image upload fields */}
+              {[0, 1, 2, 3, 4].map((index) => (
+                <Box key={index} sx={{ mt: 2 }}>
+                  <input
+                    accept="image/*"
+                    type="file"
+                    name={`image-${index}`}
+                    onChange={handleInputChange}
+                    style={{ display: "none" }}
+                    id={`messageImage-${index}`}
                   />
-                )}
-              </Box>
+                  <label htmlFor={`messageImage-${index}`}>
+                    <Button
+                      component="span"
+                      color="error" // Try changing this
+                      variant="contained"
+                      startIcon={<CloudUploadIcon />}
+                    >
+                      Upload Image {index + 1}
+                    </Button>
+                  </label>
+                  {formData.images[index] && (
+                    <Chip
+                      label={formData.images[index].name}
+                      onDelete={() => {
+                        const newImages = [...formData.images];
+                        newImages[index] = null;
+                        setFormData((prev) => ({ ...prev, images: newImages }));
+                      }}
+                      sx={{ mt: 1, ml: 1 }}
+                    />
+                  )}
+                </Box>
+              ))}
             </Grid>
           </Grid>
         </DialogContent>
