@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Dialog,
@@ -33,6 +34,7 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const ITEMS_PER_PAGE = 5;
 
 const NewsItem = ({ item }) => (
   <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -78,6 +80,7 @@ NewsItem.propTypes = {
 };
 
 function NewsManagement() {
+  const navigate = useNavigate();
   const [state, setState] = useState({
     news: [],
     filteredNews: [],
@@ -96,6 +99,7 @@ function NewsManagement() {
     open: false,
     confirmDelete: null,
     isEdit: false,
+    editingId: null,
   });
 
   const [formData, setFormData] = useState({
@@ -111,6 +115,16 @@ function NewsManagement() {
     subText: false,
     expireAt: false,
   });
+
+  const getToken = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showSnackbar("No token found, please login again", "error");
+      navigate("/authentication/sign-in");
+      return null;
+    }
+    return token;
+  };
 
   const showSnackbar = (message, severity = "success") => {
     setState((prev) => ({
@@ -135,12 +149,14 @@ function NewsManagement() {
 
   const fetchNews = async () => {
     try {
+      const token = getToken();
+      if (!token) return;
+
       setState((prev) => ({ ...prev, loading: true }));
 
       const response = await fetch(`${BASE_URL}/api/updated-news`, {
         headers: {
-          Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiYmVmZjFhMzEtYTZhMC00MTg2LThhOTctMDU2ZmI1OTU5MDgxIiwiaWF0IjoxNzQ0MzU2NTg3LCJleHAiOjE3NDQ5NjEzODd9.RNP9bMoEB7BKycSIHvWIotA5Xlx_hmlNB49LBFIhvjM",
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -155,6 +171,7 @@ function NewsManagement() {
           news: data.data,
           filteredNews: data.data,
           loading: false,
+          totalPages: Math.ceil(data.data.length / ITEMS_PER_PAGE),
         }));
       } else {
         throw new Error(data.message || "No news found");
@@ -168,7 +185,7 @@ function NewsManagement() {
 
   const handleSearchChange = (e) => {
     const query = e.target.value.toLowerCase();
-    setState((prev) => ({ ...prev, searchTerm: query }));
+    setState((prev) => ({ ...prev, searchTerm: query, currentPage: 1 }));
 
     if (query.trim() === "") {
       setState((prev) => ({ ...prev, filteredNews: prev.news }));
@@ -179,7 +196,15 @@ function NewsManagement() {
       (item) =>
         item.text.toLowerCase().includes(query) || item.subText.toLowerCase().includes(query)
     );
-    setState((prev) => ({ ...prev, filteredNews: filtered }));
+    setState((prev) => ({
+      ...prev,
+      filteredNews: filtered,
+      totalPages: Math.ceil(filtered.length / ITEMS_PER_PAGE),
+    }));
+  };
+
+  const handlePageChange = (event, page) => {
+    setState((prev) => ({ ...prev, currentPage: page }));
   };
 
   const validateForm = () => {
@@ -199,6 +224,9 @@ function NewsManagement() {
       return;
     }
 
+    const token = getToken();
+    if (!token) return;
+
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("text", formData.text);
@@ -210,8 +238,7 @@ function NewsManagement() {
       const response = await fetch(`${BASE_URL}/api/updated-news`, {
         method: "POST",
         headers: {
-          Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiYmVmZjFhMzEtYTZhMC00MTg2LThhOTctMDU2ZmI1OTU5MDgxIiwiaWF0IjoxNzQ0MzU2NTg3LCJleHAiOjE3NDQ5NjEzODd9.RNP9bMoEB7BKycSIHvWIotA5Xlx_hmlNB49LBFIhvjM",
+          Authorization: `Bearer ${token}`,
         },
         body: formDataToSend,
       });
@@ -229,6 +256,7 @@ function NewsManagement() {
             ...prev,
             news: [newNews, ...prev.news],
             filteredNews: [newNews, ...prev.filteredNews],
+            totalPages: Math.ceil((prev.filteredNews.length + 1) / ITEMS_PER_PAGE),
           }));
           setDialogState((prev) => ({ ...prev, open: false }));
           resetForm();
@@ -249,6 +277,9 @@ function NewsManagement() {
       return;
     }
 
+    const token = getToken();
+    if (!token) return;
+
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("text", formData.text);
@@ -260,8 +291,7 @@ function NewsManagement() {
       const response = await fetch(`${BASE_URL}/api/updated-news/${dialogState.editingId}`, {
         method: "PUT",
         headers: {
-          Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiYmVmZjFhMzEtYTZhMC00MTg2LThhOTctMDU2ZmI1OTU5MDgxIiwiaWF0IjoxNzQ0MzU2NTg3LCJleHAiOjE3NDQ5NjEzODd9.RNP9bMoEB7BKycSIHvWIotA5Xlx_hmlNB49LBFIhvjM",
+          Authorization: `Bearer ${token}`,
         },
         body: formDataToSend,
       });
@@ -273,7 +303,7 @@ function NewsManagement() {
 
       const data = await response.json();
       if (data.success) {
-        fetchNews(); // Refresh the list
+        fetchNews();
         setDialogState((prev) => ({ ...prev, open: false, editingId: null }));
         resetForm();
         showSnackbar("News updated successfully");
@@ -323,12 +353,14 @@ function NewsManagement() {
   };
 
   const handleDeleteNews = async (newsId) => {
+    const token = getToken();
+    if (!token) return;
+
     try {
       const response = await fetch(`${BASE_URL}/api/updated-news/${newsId}`, {
         method: "DELETE",
         headers: {
-          Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiYmVmZjFhMzEtYTZhMC00MTg2LThhOTctMDU2ZmI1OTU5MDgxIiwiaWF0IjoxNzQ0MzU2NTg3LCJleHAiOjE3NDQ5NjEzODd9.RNP9bMoEB7BKycSIHvWIotA5Xlx_hmlNB49LBFIhvjM",
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -343,6 +375,7 @@ function NewsManagement() {
           ...prev,
           news: prev.news.filter((item) => item.id !== newsId),
           filteredNews: prev.filteredNews.filter((item) => item.id !== newsId),
+          totalPages: Math.ceil((prev.filteredNews.length - 1) / ITEMS_PER_PAGE),
         }));
         setDialogState((prev) => ({ ...prev, confirmDelete: null }));
         showSnackbar("News deleted successfully");
@@ -397,6 +430,11 @@ function NewsManagement() {
     fetchNews();
   }, []);
 
+  const paginatedNews = state.filteredNews.slice(
+    (state.currentPage - 1) * ITEMS_PER_PAGE,
+    state.currentPage * ITEMS_PER_PAGE
+  );
+
   if (state.loading && state.news.length === 0) {
     return (
       <DashboardLayout>
@@ -433,7 +471,7 @@ function NewsManagement() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    News
+                    News s
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
                     <TextField
@@ -455,13 +493,25 @@ function NewsManagement() {
               </MDBox>
               <MDBox pt={3}>
                 {state.filteredNews.length > 0 ? (
-                  <DataTable
-                    table={{ columns, rows: state.filteredNews }}
-                    isSorted={false}
-                    entriesPerPage={false}
-                    showTotalEntries={false}
-                    noEndBorder
-                  />
+                  <>
+                    <DataTable
+                      table={{ columns, rows: paginatedNews }}
+                      isSorted={false}
+                      entriesPerPage={false}
+                      showTotalEntries={false}
+                      noEndBorder
+                    />
+                    <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                      <Pagination
+                        count={state.totalPages}
+                        page={state.currentPage}
+                        onChange={handlePageChange}
+                        color="error"
+                        showFirstButton
+                        showLastButton
+                      />
+                    </Box>
+                  </>
                 ) : (
                   <MDBox p={3} textAlign="center">
                     <MDTypography variant="body1">
@@ -539,7 +589,7 @@ function NewsManagement() {
                   <Button
                     component="span"
                     color="error"
-                    variant="outlined"
+                    variant="contained"
                     startIcon={<CloudUploadIcon />}
                     sx={{ mb: 2 }}
                   >
@@ -568,7 +618,7 @@ function NewsManagement() {
                   <Button
                     component="span"
                     color="error"
-                    variant="outlined"
+                    variant="contained"
                     startIcon={<CloudUploadIcon />}
                   >
                     Upload Video

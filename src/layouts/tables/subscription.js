@@ -348,14 +348,14 @@ function SubscriptionManagement() {
                       size="small"
                       disabled={!state.selectedUserId}
                     />
-                    <Button
+                    {/* <Button
                       variant="contained"
                       color="error"
                       onClick={() => setDialogState((prev) => ({ ...prev, open: true }))}
                       disabled={!state.selectedUserId}
                     >
                       Create Subscription
-                    </Button>
+                    </Button> */}
                   </MDBox>
                 </MDBox>
               </MDBox>

@@ -2,6 +2,8 @@
 import Dashboard from "layouts/dashboard";
 import SignIn from "layouts/authentication/sign-in";
 // @mui icons
+import PhoneInTalkIcon from "@mui/icons-material/PhoneInTalk";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import Icon from "@mui/material/Icon";
 import ArticleIcon from "@mui/icons-material/Article";
 import Users from "layouts/tables/Users";
@@ -14,6 +16,8 @@ import WalletHistory from "layouts/tables/wallethistory";
 import SubscriptionOrders from "layouts/tables/orders";
 import QuizResults from "layouts/tables/quizresult";
 import NewsAPIComponent from "layouts/tables/news";
+import CallVerifications from "layouts/tables/callverification";
+import AudioNotifications from "layouts/tables/audionotifications";
 
 // Define routes
 const routes = [
@@ -64,6 +68,22 @@ const routes = [
     icon: <ArticleIcon fontSize="small" />,
     route: "/news",
     component: <NewsAPIComponent />,
+  },
+  {
+    type: "collapse",
+    name: "Audio Notifications",
+    key: "audio-notifications",
+    icon: <NotificationsActiveIcon fontSize="small" />,
+    route: "/audio-notifications",
+    component: <AudioNotifications />,
+  },
+  {
+    type: "collapse",
+    name: "call verification",
+    key: "call-verification",
+    icon: <PhoneInTalkIcon fontSize="small" />,
+    route: "/call-verification",
+    component: <CallVerifications />,
   },
   {
     type: "collapse",
