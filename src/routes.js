@@ -18,6 +18,7 @@ import QuizResults from "layouts/tables/quizresult";
 import NewsAPIComponent from "layouts/tables/news";
 import CallVerifications from "layouts/tables/callverification";
 import AudioNotifications from "layouts/tables/audionotifications";
+import TransactionManagement from "layouts/tables/transactions";
 
 // Define routes
 const routes = [
@@ -108,6 +109,14 @@ const routes = [
     icon: <Icon fontSize="small">subscriptions</Icon>,
     route: "/subscription",
     component: <SubscriptionManagement />,
+  },
+  {
+    type: "collapse",
+    name: "transactions",
+    key: "transactions",
+    icon: <Icon fontSize="small">subscriptions</Icon>,
+    route: "/transactions",
+    component: <TransactionManagement />,
   },
   {
     type: "collapse",

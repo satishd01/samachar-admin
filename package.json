@@ -28,7 +28,7 @@
     "chroma-js": "2.4.2",
     "clsx": "^1.1.0",
     "crypto-browserify": "^3.12.1",
-    "date-fns": "^4.1.0",
+    "date-fns": "^2.29.3",
     "dotenv": "^16.4.7",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",
