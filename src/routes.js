@@ -19,6 +19,7 @@ import NewsAPIComponent from "layouts/tables/news";
 import CallVerifications from "layouts/tables/callverification";
 import AudioNotifications from "layouts/tables/audionotifications";
 import TransactionManagement from "layouts/tables/transactions";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 
 // Define routes
 const routes = [
@@ -114,7 +115,7 @@ const routes = [
     type: "collapse",
     name: "Transactions",
     key: "Transactions",
-    icon: <Icon fontSize="small">subscriptions</Icon>,
+    icon: <ReceiptLongIcon fontSize="small" />,
     route: "/transactions",
     component: <TransactionManagement />,
   },
