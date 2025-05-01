@@ -216,7 +216,7 @@ function SubscriptionManagement() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${BASE_URL}/api/subscription`, {
+      const response = await fetch(`${BASE_URL}/api/admin/subscribe-user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -348,14 +348,13 @@ function SubscriptionManagement() {
                       size="small"
                       disabled={!state.selectedUserId}
                     />
-                    {/* <Button
+                    <Button
                       variant="contained"
                       color="error"
                       onClick={() => setDialogState((prev) => ({ ...prev, open: true }))}
-                      disabled={!state.selectedUserId}
                     >
-                      Create Subscription
-                    </Button> */}
+                      Allocate Subscription
+                    </Button>
                   </MDBox>
                 </MDBox>
               </MDBox>

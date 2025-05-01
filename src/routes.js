@@ -80,8 +80,8 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "call verification",
-    key: "call-verification",
+    name: "Call verification",
+    key: "Call-verification",
     icon: <PhoneInTalkIcon fontSize="small" />,
     route: "/call-verification",
     component: <CallVerifications />,
@@ -112,8 +112,8 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "transactions",
-    key: "transactions",
+    name: "Transactions",
+    key: "Transactions",
     icon: <Icon fontSize="small">subscriptions</Icon>,
     route: "/transactions",
     component: <TransactionManagement />,
