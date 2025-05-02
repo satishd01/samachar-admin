@@ -12,6 +12,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import TablePagination from "@mui/material/TablePagination";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -39,6 +40,10 @@ function AudioNotifications() {
   const [newAudio, setNewAudio] = useState({
     name: "",
     file: null,
+  });
+  const [pagination, setPagination] = useState({
+    page: 0,
+    rowsPerPage: 10,
   });
 
   useEffect(() => {
@@ -73,7 +78,7 @@ function AudioNotifications() {
       }
 
       const data = await response.json();
-      setAudios(data.data);
+      setAudios(data.data || data);
     } catch (error) {
       console.error("Error fetching audio data:", error);
       showSnackbar("Error fetching audio notifications", "error");
@@ -176,6 +181,18 @@ function AudioNotifications() {
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
+    setPagination({ ...pagination, page: 0 });
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPagination({ ...pagination, page: newPage });
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setPagination({
+      page: 0,
+      rowsPerPage: parseInt(event.target.value, 10),
+    });
   };
 
   const columns = [
@@ -212,6 +229,11 @@ function AudioNotifications() {
       (audio.admin?.name && audio.admin.name.toLowerCase().includes(searchTermLower))
     );
   });
+
+  const paginatedAudios = filteredAudios.slice(
+    pagination.page * pagination.rowsPerPage,
+    pagination.page * pagination.rowsPerPage + pagination.rowsPerPage
+  );
 
   if (loading) {
     return (
@@ -266,19 +288,37 @@ function AudioNotifications() {
                         },
                       }}
                     />
-                    {/* <Button variant="contained" color="error" onClick={() => setUploadOpen(true)}>
+                    <Button variant="contained" color="error" onClick={() => setUploadOpen(true)}>
                       Upload Audio
-                    </Button> */}
+                    </Button>
                   </MDBox>
                 </MDBox>
               </MDBox>
               <MDBox pt={3}>
                 <DataTable
-                  table={{ columns, rows: filteredAudios }}
+                  table={{
+                    columns,
+                    rows: paginatedAudios,
+                  }}
                   isSorted={false}
                   entriesPerPage={false}
                   showTotalEntries={false}
                   noEndBorder
+                />
+                <TablePagination
+                  component="div"
+                  count={filteredAudios.length}
+                  page={pagination.page}
+                  onPageChange={handleChangePage}
+                  rowsPerPage={pagination.rowsPerPage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  rowsPerPageOptions={[5, 10, 25]}
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+                    padding: "16px",
+                  }}
                 />
               </MDBox>
             </Card>
@@ -286,7 +326,6 @@ function AudioNotifications() {
         </Grid>
       </MDBox>
 
-      {/* Confirmation Dialog */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Confirm Notification</DialogTitle>
         <DialogContent>
@@ -302,7 +341,6 @@ function AudioNotifications() {
         </DialogActions>
       </Dialog>
 
-      {/* Upload Dialog */}
       <Dialog open={uploadOpen} onClose={() => setUploadOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Upload New Audio</DialogTitle>
         <DialogContent>
@@ -343,7 +381,6 @@ function AudioNotifications() {
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

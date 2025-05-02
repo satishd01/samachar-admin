@@ -20,6 +20,7 @@ import {
   InputLabel,
   Select,
   CircularProgress,
+  TablePagination,
 } from "@mui/material";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import MDBox from "components/MDBox";
@@ -28,9 +29,9 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-import DateTimePicker from "@mui/lab/DateTimePicker";
-import LocalizationProvider from "@mui/lab/LocalizationProvider";
-import AdapterDateFns from "@mui/lab/AdapterDateFns";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -45,6 +46,10 @@ function QuizManagement() {
       open: false,
       message: "",
       severity: "success",
+    },
+    pagination: {
+      page: 0,
+      rowsPerPage: 5,
     },
   });
 
@@ -141,8 +146,10 @@ function QuizManagement() {
         return;
       }
 
+      // Format dates to ISO string in UTC timezone
       const formattedData = {
-        ...dialogState.createQuiz.formData,
+        title: dialogState.createQuiz.formData.title,
+        description: dialogState.createQuiz.formData.description,
         startTime: dialogState.createQuiz.formData.startTime.toISOString(),
         endTime: dialogState.createQuiz.formData.endTime.toISOString(),
       };
@@ -282,9 +289,28 @@ function QuizManagement() {
     }));
   };
 
+  const handleChangePage = (event, newPage) => {
+    setState((prev) => ({
+      ...prev,
+      pagination: {
+        ...prev.pagination,
+        page: newPage,
+      },
+    }));
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setState((prev) => ({
+      ...prev,
+      pagination: {
+        page: 0,
+        rowsPerPage: parseInt(event.target.value, 10),
+      },
+    }));
+  };
+
   const columns = [
     { Header: "Title", accessor: "title" },
-    // { Header: "Description", accessor: "description" },
     {
       Header: "Start Time",
       accessor: "startTime",
@@ -342,6 +368,12 @@ function QuizManagement() {
     );
   });
 
+  // Apply pagination
+  const paginatedQuizzes = filteredQuizzes.slice(
+    state.pagination.page * state.pagination.rowsPerPage,
+    state.pagination.page * state.pagination.rowsPerPage + state.pagination.rowsPerPage
+  );
+
   if (state.loading && state.quizzes.length === 0) {
     return (
       <DashboardLayout>
@@ -378,7 +410,7 @@ function QuizManagement() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Quiz
+                    Quiz Management
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
                     <TextField
@@ -410,13 +442,24 @@ function QuizManagement() {
               </MDBox>
               <MDBox pt={3}>
                 {filteredQuizzes.length > 0 ? (
-                  <DataTable
-                    table={{ columns, rows: filteredQuizzes }}
-                    isSorted={false}
-                    entriesPerPage={false}
-                    showTotalEntries={false}
-                    noEndBorder
-                  />
+                  <>
+                    <DataTable
+                      table={{ columns, rows: paginatedQuizzes }}
+                      isSorted={false}
+                      entriesPerPage={false}
+                      showTotalEntries={false}
+                      noEndBorder
+                    />
+                    <TablePagination
+                      rowsPerPageOptions={[5, 10, 25]}
+                      component="div"
+                      count={filteredQuizzes.length}
+                      rowsPerPage={state.pagination.rowsPerPage}
+                      page={state.pagination.page}
+                      onPageChange={handleChangePage}
+                      onRowsPerPageChange={handleChangeRowsPerPage}
+                    />
+                  </>
                 ) : (
                   <MDBox p={3} textAlign="center">
                     <MDTypography variant="body1">
@@ -444,9 +487,16 @@ function QuizManagement() {
         }
         fullWidth
         maxWidth="sm"
+        sx={{
+          "& .MuiDialog-container": {
+            "& .MuiPaper-root": {
+              maxHeight: "80vh", // Limit modal height
+            },
+          },
+        }}
       >
         <DialogTitle>Create New Quiz</DialogTitle>
-        <DialogContent>
+        <DialogContent dividers>
           <TextField
             autoFocus
             margin="normal"
@@ -456,7 +506,44 @@ function QuizManagement() {
             fullWidth
             value={dialogState.createQuiz.formData.title}
             onChange={(e) => handleInputChange(e, "createQuiz")}
+            required
           />
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DateTimePicker
+              label="Start Time (UTC)"
+              value={dialogState.createQuiz.formData.startTime}
+              onChange={(date) => handleDateChange("startTime", date, "createQuiz")}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  fullWidth
+                  margin="normal"
+                  helperText="Date and time in UTC timezone"
+                />
+              )}
+              minDateTime={new Date()}
+              PopperProps={{
+                placement: "bottom-start", // Ensure calendar opens above the input
+              }}
+            />
+            <DateTimePicker
+              label="End Time (UTC)"
+              value={dialogState.createQuiz.formData.endTime}
+              onChange={(date) => handleDateChange("endTime", date, "createQuiz")}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  fullWidth
+                  margin="normal"
+                  helperText="Date and time in UTC timezone"
+                />
+              )}
+              minDateTime={dialogState.createQuiz.formData.startTime}
+              PopperProps={{
+                placement: "bottom-end", // Ensure calendar opens above the input
+              }}
+            />
+          </LocalizationProvider>
           <TextField
             margin="normal"
             name="description"
@@ -468,21 +555,6 @@ function QuizManagement() {
             value={dialogState.createQuiz.formData.description}
             onChange={(e) => handleInputChange(e, "createQuiz")}
           />
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DateTimePicker
-              label="Start Time"
-              value={dialogState.createQuiz.formData.startTime}
-              onChange={(date) => handleDateChange("startTime", date, "createQuiz")}
-              renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
-            />
-            <DateTimePicker
-              label="End Time"
-              value={dialogState.createQuiz.formData.endTime}
-              onChange={(date) => handleDateChange("endTime", date, "createQuiz")}
-              renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
-              minDateTime={dialogState.createQuiz.formData.startTime}
-            />
-          </LocalizationProvider>
         </DialogContent>
         <DialogActions>
           <Button
@@ -498,12 +570,7 @@ function QuizManagement() {
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleCreateQuiz}
-            color="error"
-            variant="contained"
-            disabled={!dialogState.createQuiz.formData.title}
-          >
+          <Button onClick={handleCreateQuiz} color="error" variant="contained">
             Create Quiz
           </Button>
         </DialogActions>
