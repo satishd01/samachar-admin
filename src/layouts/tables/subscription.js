@@ -471,7 +471,6 @@ function SubscriptionManagement() {
                   label="Frequency"
                   sx={{ width: 300, height: 35 }}
                 >
-                  <MenuItem value="daily">Daily</MenuItem>
                   <MenuItem value="weekly">Weekly</MenuItem>
                   <MenuItem value="monthly">Monthly</MenuItem>
                   <MenuItem value="yearly">Yearly</MenuItem>
