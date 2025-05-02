@@ -18,6 +18,10 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
+import * as XLSX from "xlsx";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import DescriptionIcon from "@mui/icons-material/Description"; // More relevant for Excel export
+import GetAppIcon from "@mui/icons-material/GetApp"; // Alternative option
 
 // Base URL from environment or default
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
@@ -82,7 +86,6 @@ function Users() {
 
       const data = await response.json();
       setUsers(data);
-      // showSnackbar("Users fetched successfully");
     } catch (error) {
       console.error("Error fetching user data:", error);
       showSnackbar("Error fetching users", "error");
@@ -216,20 +219,47 @@ function Users() {
     setOpenEditDialog(true);
   };
 
+  const exportToExcel = () => {
+    // Prepare data for Excel export
+    const excelData = users.map((user) => ({
+      Name: user.name,
+      Email: user.email,
+      "Phone Number": user.phoneNumber,
+      About: user.about || "",
+      "KYC Status": user.KYCStatus || "pending",
+      Verified: user.isVerified ? "Yes" : "No",
+      "Last Seen": user.lastSeen || "",
+      // "Created At": user.createdAt ? new Date(user.createdAt).toLocaleString() : "",
+      // "Updated At": user.updatedAt ? new Date(user.updatedAt).toLocaleString() : "",
+    }));
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+    // Generate Excel file and download
+    XLSX.writeFile(workbook, "users_export.xlsx");
+
+    showSnackbar("Users data exported successfully");
+  };
+
   const columns = [
     { Header: "Name", accessor: "name" },
     { Header: "Email", accessor: "email" },
     { Header: "Phone Number", accessor: "phoneNumber" },
     { Header: "KYC Status", accessor: "KYCStatus" },
     { Header: "Verified", accessor: "isVerified", Cell: ({ value }) => (value ? "Yes" : "No") },
-    {
-      Header: "Actions",
-      Cell: ({ row }) => (
-        <Button variant="contained" color="error" onClick={() => handleEditClick(row.original)}>
-          Edit
-        </Button>
-      ),
-    },
+    // {
+    //   Header: "Actions",
+    //   Cell: ({ row }) => (
+    //     <Button variant="contained" color="error" onClick={() => handleEditClick(row.original)}>
+    //       Edit
+    //     </Button>
+    //   ),
+    // },
   ];
 
   const filteredUsers = users.filter((user) => {
@@ -295,6 +325,18 @@ function Users() {
                         },
                       }}
                     />
+                    <Button
+                      variant="contained"
+                      color="success"
+                      startIcon={<GetAppIcon color="success" />}
+                      onClick={exportToExcel}
+                      sx={{
+                        textTransform: "none", // Prevents uppercase transformation
+                        ml: 2, // Add some left margin if needed
+                      }}
+                    >
+                      Export
+                    </Button>
                     {/* <Button
                       variant="contained"
                       color="error"

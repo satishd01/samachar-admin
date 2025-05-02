@@ -521,7 +521,7 @@ function GroupsManagement() {
                   <Button
                     component="span"
                     color="error"
-                    variant="outlined"
+                    variant="contained"
                     startIcon={<CloudUploadIcon />}
                   >
                     Upload Group Image

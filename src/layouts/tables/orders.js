@@ -27,6 +27,8 @@ import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import IconButton from "@mui/material/IconButton";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -218,12 +220,16 @@ function SubscriptionOrders() {
       Cell: StatusCell,
     },
     {
-      Header: "Actions",
+      Header: "View Details",
       accessor: "actions",
       Cell: ({ row }) => (
-        <Button variant="contained" color="error" onClick={() => handleViewDetails(row.original)}>
-          View Details
-        </Button>
+        <IconButton
+          color="info"
+          onClick={() => handleViewDetails(row.original)}
+          aria-label="view details"
+        >
+          <VisibilityIcon />
+        </IconButton>
       ),
     },
   ];

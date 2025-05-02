@@ -27,6 +27,8 @@ import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import IconButton from "@mui/material/IconButton";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -150,7 +152,7 @@ function WalletHistory() {
 
   const userColumns = [
     { Header: "Name", accessor: "name" },
-    { Header: "Email", accessor: "email" },
+    // { Header: "Email", accessor: "email" },
     { Header: "Phone", accessor: "phoneNumber" },
     {
       Header: "Status",
@@ -165,14 +167,19 @@ function WalletHistory() {
       Header: "Transactions",
       accessor: "actions",
       Cell: ({ row }) => (
-        <Button
-          variant="contained"
-          color="error"
+        <IconButton
+          color={row.original.wallet?.transactions?.length ? "success" : "info"}
           onClick={() => handleViewTransactions(row.original)}
-          disabled={!row.original.wallet?.transactions?.length}
+          // disabled={!row.original.wallet?.transactions?.length}
+          title={`View transactions (${row.original.wallet?.transactions?.length || 0})`}
         >
-          View ({row.original.wallet?.transactions?.length || 0})
-        </Button>
+          <VisibilityIcon />
+          {row.original.wallet?.transactions?.length > 0 && (
+            <MDTypography variant="caption" color="text" ml={0.5}>
+              ({row.original.wallet.transactions.length})
+            </MDTypography>
+          )}
+        </IconButton>
       ),
     },
   ];

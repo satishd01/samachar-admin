@@ -288,9 +288,9 @@ function AudioNotifications() {
                         },
                       }}
                     />
-                    <Button variant="contained" color="error" onClick={() => setUploadOpen(true)}>
+                    {/* <Button variant="contained" color="error" onClick={() => setUploadOpen(true)}>
                       Upload Audio
-                    </Button>
+                    </Button> */}
                   </MDBox>
                 </MDBox>
               </MDBox>
