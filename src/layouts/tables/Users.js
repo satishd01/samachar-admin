@@ -20,20 +20,22 @@ import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import * as XLSX from "xlsx";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import DescriptionIcon from "@mui/icons-material/Description"; // More relevant for Excel export
-import GetAppIcon from "@mui/icons-material/GetApp"; // Alternative option
+import DescriptionIcon from "@mui/icons-material/Description";
+import GetAppIcon from "@mui/icons-material/GetApp";
+import { MenuItem } from "@mui/material";
 
-// Base URL from environment or default
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
 function Users() {
   const navigate = useNavigate();
   const theme = useTheme();
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openSubscriptionDialog, setOpenSubscriptionDialog] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [profileImage, setProfileImage] = useState(null);
   const [snackbar, setSnackbar] = useState({
@@ -41,7 +43,6 @@ function Users() {
     message: "",
     severity: "success",
   });
-
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -52,9 +53,17 @@ function Users() {
     isVerified: false,
     lastSeen: "",
   });
+  const [subscriptionData, setSubscriptionData] = useState({
+    userId: "",
+    groupId: "",
+    frequency: "one_month",
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split("T")[0],
+  });
 
   useEffect(() => {
     fetchUsers();
+    fetchGroups();
   }, []);
 
   const showSnackbar = (message, severity = "success") => {
@@ -89,8 +98,31 @@ function Users() {
     } catch (error) {
       console.error("Error fetching user data:", error);
       showSnackbar("Error fetching users", "error");
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchGroups = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${BASE_URL}/api/groups`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch groups");
+      }
+
+      const data = await response.json();
+      if (data.success && data.groups) {
+        setGroups(data.groups);
+      } else {
+        throw new Error(data.message || "No groups found");
+      }
+    } catch (error) {
+      console.error("Error fetching groups:", error);
+      showSnackbar(error.message || "Error fetching groups", "error");
     }
   };
 
@@ -219,8 +251,61 @@ function Users() {
     setOpenEditDialog(true);
   };
 
+  const handleAllocateSubscription = (user) => {
+    setCurrentUser(user);
+    setSubscriptionData({
+      userId: user.id,
+      groupId: "",
+      frequency: "one_month",
+      startDate: new Date().toISOString().split("T")[0],
+      endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split("T")[0],
+    });
+    setOpenSubscriptionDialog(true);
+  };
+
+  const handleSubscriptionInputChange = (e) => {
+    const { name, value } = e.target;
+    setSubscriptionData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleCreateSubscription = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const payload = {
+        userId: subscriptionData.userId,
+        groupId: subscriptionData.groupId,
+        frequency: subscriptionData.frequency,
+        startDate: subscriptionData.startDate,
+        endDate: subscriptionData.endDate,
+      };
+
+      const response = await fetch(`${BASE_URL}/api/admin/subscribe-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create subscription");
+      }
+
+      const data = await response.json();
+      showSnackbar("Subscription created successfully");
+      setOpenSubscriptionDialog(false);
+    } catch (error) {
+      console.error("Error creating subscription:", error);
+      showSnackbar(error.message || "Error creating subscription", "error");
+    }
+  };
+
   const exportToExcel = () => {
-    // Prepare data for Excel export
     const excelData = users.map((user) => ({
       Name: user.name,
       Email: user.email,
@@ -229,18 +314,11 @@ function Users() {
       "KYC Status": user.KYCStatus || "pending",
       Verified: user.isVerified ? "Yes" : "No",
       "Last Seen": user.lastSeen || "",
-      // "Created At": user.createdAt ? new Date(user.createdAt).toLocaleString() : "",
-      // "Updated At": user.updatedAt ? new Date(user.updatedAt).toLocaleString() : "",
     }));
 
-    // Create worksheet
     const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-    // Create workbook
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
-
-    // Generate Excel file and download
     XLSX.writeFile(workbook, "users_export.xlsx");
 
     showSnackbar("Users data exported successfully");
@@ -252,19 +330,22 @@ function Users() {
     { Header: "Phone Number", accessor: "phoneNumber" },
     { Header: "KYC Status", accessor: "KYCStatus" },
     { Header: "Verified", accessor: "isVerified", Cell: ({ value }) => (value ? "Yes" : "No") },
-    // {
-    //   Header: "Actions",
-    //   Cell: ({ row }) => (
-    //     <Button variant="contained" color="error" onClick={() => handleEditClick(row.original)}>
-    //       Edit
-    //     </Button>
-    //   ),
-    // },
+    {
+      Header: "Actions",
+      Cell: ({ row }) => (
+        <Button
+          variant="contained"
+          color="error"
+          onClick={() => handleAllocateSubscription(row.original)}
+        >
+          subscribe
+        </Button>
+      ),
+    },
   ];
 
   const filteredUsers = users.filter((user) => {
     const searchTermLower = searchTerm.toLowerCase();
-
     return (
       (user.name && user.name.toLowerCase().includes(searchTermLower)) ||
       (user.email && user.email.toLowerCase().includes(searchTermLower)) ||
@@ -331,19 +412,12 @@ function Users() {
                       startIcon={<GetAppIcon color="success" />}
                       onClick={exportToExcel}
                       sx={{
-                        textTransform: "none", // Prevents uppercase transformation
-                        ml: 2, // Add some left margin if needed
+                        textTransform: "none",
+                        ml: 2,
                       }}
                     >
                       Export
                     </Button>
-                    {/* <Button
-                      variant="contained"
-                      color="error"
-                      onClick={() => setOpenCreateDialog(true)}
-                    >
-                      Create User
-                    </Button> */}
                   </MDBox>
                 </MDBox>
               </MDBox>
@@ -549,6 +623,78 @@ function Users() {
           <Button onClick={() => setOpenEditDialog(false)}>Cancel</Button>
           <Button onClick={handleUpdateUser} color="error" variant="contained">
             Update
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Allocate Subscription Dialog */}
+      <Dialog
+        open={openSubscriptionDialog}
+        onClose={() => setOpenSubscriptionDialog(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Allocate Subscription</DialogTitle>
+        <DialogContent>
+          <TextField
+            margin="dense"
+            name="groupId"
+            label="Group"
+            type="text"
+            fullWidth
+            value={subscriptionData.groupId}
+            onChange={handleSubscriptionInputChange}
+            select
+            sx={{ mb: 2, width: 200, height: 30 }}
+          >
+            {groups.map((group) => (
+              <MenuItem key={group.id} value={group.id}>
+                {group.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            margin="dense"
+            name="frequency"
+            label="Frequency"
+            type="text"
+            fullWidth
+            value={subscriptionData.frequency}
+            onChange={handleSubscriptionInputChange}
+            select
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="one_month">One Month</MenuItem>
+            <MenuItem value="two_month">Two Months</MenuItem>
+            <MenuItem value="three_month">Three Months</MenuItem>
+            <MenuItem value="yearly">Yearly</MenuItem>
+            <MenuItem value="custom">Custom</MenuItem>
+          </TextField>
+          <TextField
+            margin="dense"
+            name="startDate"
+            label="Start Date"
+            type="date"
+            fullWidth
+            value={subscriptionData.startDate}
+            onChange={handleSubscriptionInputChange}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            name="endDate"
+            label="End Date"
+            type="date"
+            fullWidth
+            value={subscriptionData.endDate}
+            onChange={handleSubscriptionInputChange}
+            sx={{ mb: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenSubscriptionDialog(false)}>Cancel</Button>
+          <Button onClick={handleCreateSubscription} color="error" variant="contained">
+            Allocate
           </Button>
         </DialogActions>
       </Dialog>

@@ -12,6 +12,10 @@ import {
   Box,
   Chip,
   IconButton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -45,6 +49,8 @@ function GroupsWithMessages() {
       severity: "success",
     },
     pdfLoading: false,
+    audioLoading: false,
+    audioFiles: [],
   });
 
   const [dialogState, setDialogState] = useState({
@@ -63,6 +69,7 @@ function GroupsWithMessages() {
     reason: "",
     discriminator: "",
     sebzRegistration: "",
+    audioId: "",
   });
 
   const showSnackbar = (message, severity = "success") => {
@@ -122,6 +129,37 @@ function GroupsWithMessages() {
     }
   };
 
+  const fetchAudioFiles = async () => {
+    try {
+      setState((prev) => ({ ...prev, audioLoading: true }));
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showSnackbar("No token found, please login again", "error");
+        return;
+      }
+
+      const response = await axios.get(`${BASE_URL}/api/audio`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.data.success) {
+        setState((prev) => ({
+          ...prev,
+          audioFiles: response.data.data || [],
+          audioLoading: false,
+        }));
+      } else {
+        throw new Error(response.data.message || "Failed to fetch audio files");
+      }
+    } catch (error) {
+      console.error("Error fetching audio files:", error);
+      showSnackbar(error.message || "Error fetching audio files", "error");
+      setState((prev) => ({ ...prev, audioLoading: false }));
+    }
+  };
+
   const handleSearchChange = (e) => {
     const query = e.target.value.toLowerCase();
     setState((prev) => ({ ...prev, searchTerm: query }));
@@ -136,15 +174,21 @@ function GroupsWithMessages() {
   const handleCreateMessage = async () => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        showSnackbar("No token found, please login again", "error");
+        return;
+      }
 
       const formDataToSend = new FormData();
 
+      // Append images
       formData.images.forEach((image, index) => {
         if (image) {
           formDataToSend.append(`image${index + 1}`, image);
         }
       });
 
+      // Append other fields
       formDataToSend.append("timeFrame", formData.timeFrame);
       formDataToSend.append("scriptName", formData.scriptName);
       formDataToSend.append("actionType", formData.actionType);
@@ -156,6 +200,11 @@ function GroupsWithMessages() {
       formDataToSend.append("sebzRegistration", formData.sebzRegistration);
       formDataToSend.append("adminId", localStorage.getItem("id"));
       formDataToSend.append("groupId", dialogState.selectedGroupId);
+
+      // Append audio if selected
+      if (formData.audioId) {
+        formDataToSend.append("audioId", formData.audioId);
+      }
 
       const response = await fetch(`${BASE_URL}/api/groups/message`, {
         method: "POST",
@@ -173,18 +222,7 @@ function GroupsWithMessages() {
       const data = await response.json();
       if (data) {
         setDialogState((prev) => ({ ...prev, open: false }));
-        setFormData({
-          images: Array(5).fill(null),
-          timeFrame: "",
-          scriptName: "",
-          actionType: "",
-          target1: "",
-          target2: "",
-          stopLoss: "",
-          reason: "",
-          discriminator: "",
-          sebzRegistration: "",
-        });
+        resetForm();
         showSnackbar("Message created successfully");
       }
     } catch (error) {
@@ -211,7 +249,8 @@ function GroupsWithMessages() {
     }
   };
 
-  const handleOpenCreateDialog = (groupId) => {
+  const handleOpenCreateDialog = async (groupId) => {
+    await fetchAudioFiles(); // Fetch audio files when opening dialog
     setDialogState({
       open: true,
       selectedGroupId: groupId,
@@ -235,11 +274,11 @@ function GroupsWithMessages() {
         throw new Error("PDF URL not found in response.");
       }
 
-      // Create a link to trigger download without changing the page URL
+      // Create a link to trigger download
       const link = document.createElement("a");
       link.href = pdfUrl;
       link.setAttribute("download", `messages_${groupId}_${Date.now()}.pdf`);
-      link.setAttribute("target", "_blank"); // Optional: opens in new tab if browser blocks download
+      link.setAttribute("target", "_blank");
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -250,6 +289,22 @@ function GroupsWithMessages() {
       showSnackbar(error.message || "Error downloading messages", "error");
       setState((prev) => ({ ...prev, pdfLoading: false }));
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      images: Array(5).fill(null),
+      timeFrame: "",
+      scriptName: "",
+      actionType: "",
+      target1: "",
+      target2: "",
+      stopLoss: "",
+      reason: "",
+      discriminator: "",
+      sebzRegistration: "",
+      audioId: "",
+    });
   };
 
   const columns = [
@@ -364,7 +419,10 @@ function GroupsWithMessages() {
       {/* Create Message Dialog */}
       <Dialog
         open={dialogState.open}
-        onClose={() => setDialogState((prev) => ({ ...prev, open: false }))}
+        onClose={() => {
+          setDialogState((prev) => ({ ...prev, open: false }));
+          resetForm();
+        }}
         fullWidth
         maxWidth="md"
         scroll="paper"
@@ -451,6 +509,28 @@ function GroupsWithMessages() {
                 margin="normal"
               />
 
+              {/* Audio selection dropdown */}
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Select Audio</InputLabel>
+                <Select
+                  value={formData.audioId}
+                  onChange={handleInputChange}
+                  name="audioId"
+                  label="Select Audio"
+                  disabled={state.audioLoading}
+                  sx={{ width: 350, height: 45 }}
+                >
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
+                  {state.audioFiles.map((audio) => (
+                    <MenuItem key={audio.id} value={audio.id}>
+                      {audio.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
               {/* Multiple image upload fields */}
               {[0, 1, 2, 3, 4].map((index) => (
                 <Box key={index} sx={{ mt: 2 }}>
@@ -465,7 +545,7 @@ function GroupsWithMessages() {
                   <label htmlFor={`messageImage-${index}`}>
                     <Button
                       component="span"
-                      color="error" // Try changing this
+                      color="error"
                       variant="contained"
                       startIcon={<CloudUploadIcon />}
                     >
@@ -489,10 +569,20 @@ function GroupsWithMessages() {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogState((prev) => ({ ...prev, open: false }))}>
+          <Button
+            onClick={() => {
+              setDialogState((prev) => ({ ...prev, open: false }));
+              resetForm();
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={handleCreateMessage} color="error" variant="contained">
+          <Button
+            onClick={handleCreateMessage}
+            color="error"
+            variant="contained"
+            disabled={!formData.scriptName || !formData.actionType}
+          >
             Create Message
           </Button>
         </DialogActions>

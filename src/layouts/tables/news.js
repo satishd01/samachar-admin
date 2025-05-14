@@ -471,7 +471,7 @@ function NewsManagement() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    News 
+                    News
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
                     <TextField

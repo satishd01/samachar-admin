@@ -8,23 +8,10 @@ import {
   TextField,
   Switch,
   FormControlLabel,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
-  Paper,
-  Avatar,
-  Pagination,
-  Grid,
-  Card,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Box,
   Chip,
+  IconButton,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -33,9 +20,11 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-import { CloudUpload as CloudUploadIcon } from "@mui/icons-material";
+import { CloudUpload as CloudUploadIcon, Edit as EditIcon } from "@mui/icons-material";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import Grid from "@mui/material/Grid";
+import Card from "@mui/material/Card";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -52,8 +41,6 @@ function GroupsManagement() {
     filteredGroups: [],
     loading: true,
     searchTerm: "",
-    currentPage: 1,
-    totalPages: 1,
     snackbar: {
       open: false,
       message: "",
@@ -63,6 +50,8 @@ function GroupsManagement() {
 
   const [dialogState, setDialogState] = useState({
     open: false,
+    mode: "create", // 'create' or 'edit'
+    currentGroup: null,
     confirmDelete: null,
   });
 
@@ -70,18 +59,23 @@ function GroupsManagement() {
     name: "",
     description: "",
     isPaid: false,
-    weeklyCharge: "",
-    monthlyCharge: "",
-    yearlyCharge: "",
+    oneMonthPrice: "",
+    twoMonthPrice: "",
+    threeMonthPrice: "",
+    yearlyPrice: "",
+    customPrice: "",
+    customDuration: "",
     groupImage: null,
+    imagePreview: null,
   });
 
   const [formErrors, setFormErrors] = useState({
     name: false,
     description: false,
-    weeklyCharge: false,
-    monthlyCharge: false,
-    yearlyCharge: false,
+    oneMonthPrice: false,
+    twoMonthPrice: false,
+    threeMonthPrice: false,
+    yearlyPrice: false,
   });
 
   const showSnackbar = (message, severity = "success") => {
@@ -165,16 +159,17 @@ function GroupsManagement() {
     };
 
     if (formData.isPaid) {
-      errors.weeklyCharge = !formData.weeklyCharge || isNaN(formData.weeklyCharge);
-      errors.monthlyCharge = !formData.monthlyCharge || isNaN(formData.monthlyCharge);
-      errors.yearlyCharge = !formData.yearlyCharge || isNaN(formData.yearlyCharge);
+      errors.oneMonthPrice = !formData.oneMonthPrice || isNaN(formData.oneMonthPrice);
+      errors.twoMonthPrice = !formData.twoMonthPrice || isNaN(formData.twoMonthPrice);
+      errors.threeMonthPrice = !formData.threeMonthPrice || isNaN(formData.threeMonthPrice);
+      errors.yearlyPrice = !formData.yearlyPrice || isNaN(formData.yearlyPrice);
     }
 
     setFormErrors(errors);
     return !Object.values(errors).some(Boolean);
   };
 
-  const handleCreateGroup = async () => {
+  const handleSubmitGroup = async () => {
     if (!validateForm()) {
       showSnackbar("Please fill all required fields correctly", "error");
       return;
@@ -187,24 +182,35 @@ function GroupsManagement() {
         return;
       }
 
+      const adminId = localStorage.getItem("id");
       const formDataToSend = new FormData();
       formDataToSend.append("name", formData.name);
       formDataToSend.append("description", formData.description);
       formDataToSend.append("isPaid", formData.isPaid.toString());
-      formDataToSend.append("adminId", localStorage.getItem("id"));
+      formDataToSend.append("adminId", adminId);
 
       if (formData.isPaid) {
-        formDataToSend.append("weeklyCharge", formData.weeklyCharge);
-        formDataToSend.append("monthlyCharge", formData.monthlyCharge);
-        formDataToSend.append("yearlyCharge", formData.yearlyCharge);
+        formDataToSend.append("oneMonthPrice", formData.oneMonthPrice);
+        formDataToSend.append("twoMonthPrice", formData.twoMonthPrice);
+        formDataToSend.append("threeMonthPrice", formData.threeMonthPrice);
+        formDataToSend.append("yearlyPrice", formData.yearlyPrice);
+        formDataToSend.append("customPrice", formData.customPrice || "0");
+        formDataToSend.append("customDuration", formData.customDuration || "0");
       }
 
       if (formData.groupImage) {
         formDataToSend.append("groupImage", formData.groupImage);
       }
 
-      const response = await fetch(`${BASE_URL}/api/group`, {
-        method: "POST",
+      const url =
+        dialogState.mode === "create"
+          ? `${BASE_URL}/api/group`
+          : `${BASE_URL}/api/groups/${dialogState.currentGroup.id}`;
+
+      const method = dialogState.mode === "create" ? "POST" : "PUT";
+
+      const response = await fetch(url, {
+        method,
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -213,28 +219,48 @@ function GroupsManagement() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create group");
+        throw new Error(errorData.message || `Failed to ${dialogState.mode} group`);
       }
 
       const data = await response.json();
       if (data.success) {
-        const newGroup = data.group || data.data;
-        if (newGroup) {
-          setState((prev) => ({
-            ...prev,
-            groups: [...prev.groups, newGroup],
-            filteredGroups: [...prev.filteredGroups, newGroup],
-          }));
+        const updatedGroup = data.group || data.data;
+        if (updatedGroup) {
+          if (dialogState.mode === "create") {
+            setState((prev) => ({
+              ...prev,
+              groups: [...prev.groups, updatedGroup],
+              filteredGroups: [...prev.filteredGroups, updatedGroup],
+            }));
+          } else {
+            setState((prev) => ({
+              ...prev,
+              groups: prev.groups.map((group) =>
+                group.id === updatedGroup.id ? updatedGroup : group
+              ),
+              filteredGroups: prev.filteredGroups.map((group) =>
+                group.id === updatedGroup.id ? updatedGroup : group
+              ),
+            }));
+          }
           setDialogState((prev) => ({ ...prev, open: false }));
           resetForm();
-          showSnackbar("Group created successfully");
+          showSnackbar(
+            `Group ${dialogState.mode === "create" ? "created" : "updated"} successfully`
+          );
         } else {
           throw new Error("Group data not found in response");
         }
       }
     } catch (error) {
-      console.error("Error creating group:", error);
-      showSnackbar(error.message || "Error creating group", "error");
+      console.error(
+        `Error ${dialogState.mode === "create" ? "creating" : "updating"} group:`,
+        error
+      );
+      showSnackbar(
+        error.message || `Error ${dialogState.mode === "create" ? "creating" : "updating"} group`,
+        "error"
+      );
     }
   };
 
@@ -243,17 +269,22 @@ function GroupsManagement() {
       name: "",
       description: "",
       isPaid: false,
-      weeklyCharge: "",
-      monthlyCharge: "",
-      yearlyCharge: "",
+      oneMonthPrice: "",
+      twoMonthPrice: "",
+      threeMonthPrice: "",
+      yearlyPrice: "",
+      customPrice: "",
+      customDuration: "",
       groupImage: null,
+      imagePreview: null,
     });
     setFormErrors({
       name: false,
       description: false,
-      weeklyCharge: false,
-      monthlyCharge: false,
-      yearlyCharge: false,
+      oneMonthPrice: false,
+      twoMonthPrice: false,
+      threeMonthPrice: false,
+      yearlyPrice: false,
     });
   };
 
@@ -273,11 +304,34 @@ function GroupsManagement() {
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
       setFormData((prev) => ({
         ...prev,
-        groupImage: e.target.files[0],
+        groupImage: file,
+        imagePreview: URL.createObjectURL(file),
       }));
     }
+  };
+
+  const handleEditGroup = (group) => {
+    setDialogState({
+      open: true,
+      mode: "edit",
+      currentGroup: group,
+    });
+    setFormData({
+      name: group.name,
+      description: group.description,
+      isPaid: group.isPaid,
+      oneMonthPrice: group.oneMonthPrice || "",
+      twoMonthPrice: group.twoMonthPrice || "",
+      threeMonthPrice: group.threeMonthPrice || "",
+      yearlyPrice: group.yearlyPrice || "",
+      customPrice: group.customPrice || "",
+      customDuration: group.customDuration || "",
+      groupImage: null,
+      imagePreview: group.groupImage ? `${BASE_URL}/${group.groupImage}` : null,
+    });
   };
 
   const handleDeleteGroup = async (groupId) => {
@@ -329,13 +383,18 @@ function GroupsManagement() {
       Header: "Actions",
       accessor: "actions",
       Cell: ({ row }) => (
-        <Button
-          variant="contained"
-          color="error"
-          onClick={() => setDialogState((prev) => ({ ...prev, confirmDelete: row.original.id }))}
-        >
-          Delete
-        </Button>
+        <Box display="flex" gap={1}>
+          <IconButton color="primary" onClick={() => handleEditGroup(row.original)}>
+            <EditIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => setDialogState((prev) => ({ ...prev, confirmDelete: row.original.id }))}
+          >
+            Delete
+          </Button>
+        </Box>
       ),
     },
   ];
@@ -393,7 +452,13 @@ function GroupsManagement() {
                     <Button
                       variant="contained"
                       color="error"
-                      onClick={() => setDialogState((prev) => ({ ...prev, open: true }))}
+                      onClick={() =>
+                        setDialogState({
+                          open: true,
+                          mode: "create",
+                          currentGroup: null,
+                        })
+                      }
                     >
                       Create New Group
                     </Button>
@@ -423,7 +488,7 @@ function GroupsManagement() {
       </MDBox>
       <Footer />
 
-      {/* Create Group Dialog */}
+      {/* Create/Edit Group Dialog */}
       <Dialog
         open={dialogState.open}
         onClose={() => {
@@ -431,9 +496,11 @@ function GroupsManagement() {
           resetForm();
         }}
         fullWidth
-        maxWidth="sm"
+        maxWidth="md"
       >
-        <DialogTitle>Create New Group</DialogTitle>
+        <DialogTitle>
+          {dialogState.mode === "create" ? "Create New Group" : "Edit Group"}
+        </DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
@@ -459,56 +526,6 @@ function GroupsManagement() {
                 error={formErrors.description}
                 helperText={formErrors.description ? "Description is required" : ""}
               />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isPaid}
-                    onChange={handleInputChange}
-                    name="isPaid"
-                    color="primary"
-                  />
-                }
-                label="Paid Group"
-              />
-              {formData.isPaid && (
-                <>
-                  <TextField
-                    label="Weekly Charge *"
-                    name="weeklyCharge"
-                    type="number"
-                    value={formData.weeklyCharge}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                    error={formErrors.weeklyCharge}
-                    helperText={formErrors.weeklyCharge ? "Valid charge required" : ""}
-                  />
-                  <TextField
-                    label="Monthly Charge *"
-                    name="monthlyCharge"
-                    type="number"
-                    value={formData.monthlyCharge}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                    error={formErrors.monthlyCharge}
-                    helperText={formErrors.monthlyCharge ? "Valid charge required" : ""}
-                  />
-                  <TextField
-                    label="Yearly Charge *"
-                    name="yearlyCharge"
-                    type="number"
-                    value={formData.yearlyCharge}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                    error={formErrors.yearlyCharge}
-                    helperText={formErrors.yearlyCharge ? "Valid charge required" : ""}
-                  />
-                </>
-              )}
               <Box sx={{ mt: 2 }}>
                 <input
                   accept="image/*"
@@ -530,30 +547,120 @@ function GroupsManagement() {
                 {formData.groupImage && (
                   <Chip
                     label={formData.groupImage.name}
-                    onDelete={() => setFormData((prev) => ({ ...prev, groupImage: null }))}
-                    sx={{ mt: 1 }}
+                    onDelete={() =>
+                      setFormData((prev) => ({ ...prev, groupImage: null, imagePreview: null }))
+                    }
+                    sx={{ mt: 1, ml: 1 }}
                   />
                 )}
               </Box>
+              {formData.imagePreview && (
+                <Box mt={2}>
+                  <img
+                    src={formData.imagePreview}
+                    alt="Group Preview"
+                    style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "4px" }}
+                  />
+                </Box>
+              )}
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.isPaid}
+                    onChange={handleInputChange}
+                    name="isPaid"
+                    color="primary"
+                  />
+                }
+                label="Paid Group"
+              />
+              {formData.isPaid && (
+                <>
+                  <TextField
+                    label="1 Month Price *"
+                    name="oneMonthPrice"
+                    type="number"
+                    value={formData.oneMonthPrice}
+                    onChange={handleInputChange}
+                    fullWidth
+                    margin="normal"
+                    error={formErrors.oneMonthPrice}
+                    helperText={formErrors.oneMonthPrice ? "Valid price required" : ""}
+                  />
+                  <TextField
+                    label="2 Months Price *"
+                    name="twoMonthPrice"
+                    type="number"
+                    value={formData.twoMonthPrice}
+                    onChange={handleInputChange}
+                    fullWidth
+                    margin="normal"
+                    error={formErrors.twoMonthPrice}
+                    helperText={formErrors.twoMonthPrice ? "Valid price required" : ""}
+                  />
+                  <TextField
+                    label="3 Months Price *"
+                    name="threeMonthPrice"
+                    type="number"
+                    value={formData.threeMonthPrice}
+                    onChange={handleInputChange}
+                    fullWidth
+                    margin="normal"
+                    error={formErrors.threeMonthPrice}
+                    helperText={formErrors.threeMonthPrice ? "Valid price required" : ""}
+                  />
+                  <TextField
+                    label="Yearly Price *"
+                    name="yearlyPrice"
+                    type="number"
+                    value={formData.yearlyPrice}
+                    onChange={handleInputChange}
+                    fullWidth
+                    margin="normal"
+                    error={formErrors.yearlyPrice}
+                    helperText={formErrors.yearlyPrice ? "Valid price required" : ""}
+                  />
+                  <TextField
+                    label="Custom Duration (days)"
+                    name="customDuration"
+                    type="number"
+                    value={formData.customDuration}
+                    onChange={handleInputChange}
+                    fullWidth
+                    margin="normal"
+                  />
+                  <TextField
+                    label="Custom Price"
+                    name="customPrice"
+                    type="number"
+                    value={formData.customPrice}
+                    onChange={handleInputChange}
+                    fullWidth
+                    margin="normal"
+                  />
+                </>
+              )}
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogState((prev) => ({ ...prev, open: false }))}>
+          <Button
+            onClick={() => {
+              setDialogState((prev) => ({ ...prev, open: false }));
+              resetForm();
+            }}
+          >
             Cancel
           </Button>
           <Button
-            onClick={handleCreateGroup}
+            onClick={handleSubmitGroup}
             color="error"
             variant="contained"
-            disabled={
-              !formData.name ||
-              !formData.description ||
-              (formData.isPaid &&
-                (!formData.weeklyCharge || !formData.monthlyCharge || !formData.yearlyCharge))
-            }
+            disabled={!formData.name}
           >
-            Create Group
+            {dialogState.mode === "create" ? "Create Group" : "Update Group"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -606,9 +713,12 @@ GroupsManagement.propTypes = {
       name: PropTypes.string.isRequired,
       description: PropTypes.string.isRequired,
       isPaid: PropTypes.bool.isRequired,
-      weeklyCharge: PropTypes.number,
-      monthlyCharge: PropTypes.number,
-      yearlyCharge: PropTypes.number,
+      oneMonthPrice: PropTypes.number,
+      twoMonthPrice: PropTypes.number,
+      threeMonthPrice: PropTypes.number,
+      yearlyPrice: PropTypes.number,
+      customPrice: PropTypes.number,
+      customDuration: PropTypes.number,
       groupImage: PropTypes.string,
       members: PropTypes.array,
     }).isRequired,

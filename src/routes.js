@@ -20,6 +20,7 @@ import CallVerifications from "layouts/tables/callverification";
 import AudioNotifications from "layouts/tables/audionotifications";
 import TransactionManagement from "layouts/tables/transactions";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import Messages from "layouts/tables/message-crud";
 
 // Define routes
 const routes = [
@@ -89,11 +90,19 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Message",
-    key: "message",
+    name: "Group&message",
+    key: "mesGroup&messagesage",
     icon: <Icon fontSize="small">message</Icon>,
     route: "/message",
     component: <MessagesManagement />,
+  },
+  {
+    type: "collapse",
+    name: "Message",
+    key: "Message",
+    icon: <Icon fontSize="small">message</Icon>,
+    route: "/message-crud",
+    component: <Messages />,
   },
   {
     type: "collapse",

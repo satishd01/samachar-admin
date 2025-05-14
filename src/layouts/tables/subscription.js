@@ -26,7 +26,6 @@ import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import { CloudUpload as CloudUploadIcon } from "@mui/icons-material";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -57,11 +56,15 @@ function SubscriptionManagement() {
     formData: {
       userId: "",
       groupId: "",
-      frequency: "monthly",
+      frequency: "one_month",
+      startDate: new Date().toISOString().split("T")[0],
+      endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split("T")[0],
     },
     formErrors: {
       userId: false,
       groupId: false,
+      startDate: false,
+      endDate: false,
     },
   });
 
@@ -198,6 +201,10 @@ function SubscriptionManagement() {
     const errors = {
       userId: !dialogState.formData.userId,
       groupId: !dialogState.formData.groupId,
+      startDate: !dialogState.formData.startDate,
+      endDate:
+        !dialogState.formData.endDate ||
+        new Date(dialogState.formData.endDate) <= new Date(dialogState.formData.startDate),
     };
 
     setDialogState((prev) => ({
@@ -210,19 +217,27 @@ function SubscriptionManagement() {
 
   const handleCreateSubscription = async () => {
     if (!validateForm()) {
-      showSnackbar("Please fill all required fields", "error"); //
+      showSnackbar("Please fill all required fields correctly", "error");
       return;
     }
 
     try {
       const token = localStorage.getItem("token");
+      const payload = {
+        userId: dialogState.formData.userId,
+        groupId: dialogState.formData.groupId,
+        frequency: dialogState.formData.frequency,
+        startDate: dialogState.formData.startDate,
+        endDate: dialogState.formData.endDate,
+      };
+
       const response = await fetch(`${BASE_URL}/api/admin/subscribe-user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(dialogState.formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -240,6 +255,10 @@ function SubscriptionManagement() {
             userId: "",
             groupId: "",
             frequency: "monthly",
+            startDate: new Date().toISOString().split("T")[0],
+            endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+              .toISOString()
+              .split("T")[0],
           },
         }));
         fetchSubscriptions(state.selectedUserId);
@@ -252,6 +271,20 @@ function SubscriptionManagement() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    setDialogState((prev) => ({
+      ...prev,
+      formData: {
+        ...prev.formData,
+        [name]: value,
+      },
+      formErrors: {
+        ...prev.formErrors,
+        [name]: false,
+      },
+    }));
+  };
+
+  const handleDateChange = (name, value) => {
     setDialogState((prev) => ({
       ...prev,
       formData: {
@@ -337,7 +370,7 @@ function SubscriptionManagement() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Subscription
+                    Subscription Management
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
                     <TextField
@@ -353,7 +386,7 @@ function SubscriptionManagement() {
                       color="error"
                       onClick={() => setDialogState((prev) => ({ ...prev, open: true }))}
                     >
-                      Allocate Subscription
+                      Create Subscription
                     </Button>
                   </MDBox>
                 </MDBox>
@@ -416,6 +449,10 @@ function SubscriptionManagement() {
               userId: "",
               groupId: "",
               frequency: "monthly",
+              startDate: new Date().toISOString().split("T")[0],
+              endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+                .toISOString()
+                .split("T")[0],
             },
           }))
         }
@@ -471,11 +508,39 @@ function SubscriptionManagement() {
                   label="Frequency"
                   sx={{ width: 300, height: 35 }}
                 >
-                  <MenuItem value="weekly">Weekly</MenuItem>
-                  <MenuItem value="monthly">Monthly</MenuItem>
-                  <MenuItem value="yearly">Yearly</MenuItem>
+                  <MenuItem value="one_month">one month</MenuItem>
+                  <MenuItem value="two_month">two month</MenuItem>
+                  <MenuItem value="three_month">three month</MenuItem>
+                  <MenuItem value="yearly">yearly</MenuItem>
+                  <MenuItem value="custom">Custom</MenuItem>
                 </Select>
               </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Start Date *"
+                type="date"
+                value={dialogState.formData.startDate}
+                onChange={(e) => handleDateChange("startDate", e.target.value)}
+                fullWidth
+                margin="normal"
+                error={dialogState.formErrors.startDate}
+                helperText={dialogState.formErrors.startDate ? "Start date is required" : ""}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="End Date *"
+                type="date"
+                value={dialogState.formData.endDate}
+                onChange={(e) => handleDateChange("endDate", e.target.value)}
+                fullWidth
+                margin="normal"
+                error={dialogState.formErrors.endDate}
+                helperText={
+                  dialogState.formErrors.endDate ? "End date must be after start date" : ""
+                }
+              />
             </Grid>
           </Grid>
         </DialogContent>
@@ -489,6 +554,10 @@ function SubscriptionManagement() {
                   userId: "",
                   groupId: "",
                   frequency: "monthly",
+                  startDate: new Date().toISOString().split("T")[0],
+                  endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+                    .toISOString()
+                    .split("T")[0],
                 },
               }))
             }
@@ -499,7 +568,13 @@ function SubscriptionManagement() {
             onClick={handleCreateSubscription}
             color="error"
             variant="contained"
-            disabled={!dialogState.formData.userId || !dialogState.formData.groupId}
+            disabled={
+              !dialogState.formData.userId ||
+              !dialogState.formData.groupId ||
+              !dialogState.formData.startDate ||
+              !dialogState.formData.endDate ||
+              new Date(dialogState.formData.endDate) <= new Date(dialogState.formData.startDate)
+            }
           >
             Create
           </Button>
