@@ -67,7 +67,7 @@ function Messages() {
       stopLoss: "",
       reason: "",
       discriminator: "",
-      sebzRegistration: "",
+      sebzRegistration: "8484998474",
       audioId: "",
       images: Array(5).fill(null),
       imagePreviews: Array(5).fill(null),
@@ -580,7 +580,7 @@ function Messages() {
                       size="small"
                     />
                     <Button variant="contained" color="error" onClick={handleCreateNewMessage}>
-                      Create New Message
+                      Send New Message
                     </Button>
                   </MDBox>
                 </MDBox>
@@ -592,7 +592,7 @@ function Messages() {
                     value={state.selectedGroupId}
                     label="Select Group"
                     onChange={handleGroupChange}
-                    sx={{ width: 300, mb: 2 }}
+                    sx={{ width: 300, height: 40, mb: 2 }}
                   >
                     {state.groups.map((group) => (
                       <MenuItem key={group.id} value={group.id}>
@@ -650,7 +650,7 @@ function Messages() {
         scroll="paper"
       >
         <DialogTitle>
-          {dialogState.mode === "create" ? "Create New Message" : "Edit Message"}
+          {dialogState.mode === "create" ? "Send New Message" : "Edit Message"}
         </DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2}>
@@ -731,7 +731,8 @@ function Messages() {
               <TextField
                 label="SEBZ Registration"
                 name="sebzRegistration"
-                value={dialogState.formData.sebzRegistration}
+                disabled
+                value={dialogState.formData.sebzRegistration || "8484998474"}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
@@ -746,6 +747,7 @@ function Messages() {
                   name="audioId"
                   label="Select Audio"
                   disabled={state.audioLoading}
+                  sx={{ width: 350, height: 45 }}
                 >
                   <MenuItem value="">
                     <em>None</em>
@@ -828,7 +830,7 @@ function Messages() {
             variant="contained"
             disabled={!dialogState.formData.scriptName || !dialogState.formData.actionType}
           >
-            {dialogState.mode === "create" ? "Create" : "Update"}
+            {dialogState.mode === "create" ? "send" : "Update"}
           </Button>
         </DialogActions>
       </Dialog>

@@ -68,7 +68,7 @@ function GroupsWithMessages() {
     stopLoss: "",
     reason: "",
     discriminator: "",
-    sebzRegistration: "",
+    sebzRegistration: "8484998474",
     audioId: "",
   });
 
@@ -326,7 +326,7 @@ function GroupsWithMessages() {
             onClick={() => handleOpenCreateDialog(row.original.id)}
             size="small"
           >
-            Create Message
+            send Message
           </Button>
           <IconButton
             color="primary"
@@ -503,7 +503,8 @@ function GroupsWithMessages() {
               <TextField
                 label="SEBZ Registration"
                 name="sebzRegistration"
-                value={formData.sebzRegistration}
+                disabled
+                value={formData.sebzRegistration || "8484998474"}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
@@ -583,7 +584,7 @@ function GroupsWithMessages() {
             variant="contained"
             disabled={!formData.scriptName || !formData.actionType}
           >
-            Create Message
+            Send Message
           </Button>
         </DialogActions>
       </Dialog>

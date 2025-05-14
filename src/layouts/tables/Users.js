@@ -52,6 +52,7 @@ function Users() {
     KYCStatus: "pending",
     isVerified: false,
     lastSeen: "",
+    fcmToken: "",
   });
   const [subscriptionData, setSubscriptionData] = useState({
     userId: "",
@@ -136,21 +137,25 @@ function Users() {
       }
 
       const formDataToSend = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          formDataToSend.append(key, value);
-        }
-      });
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("email", formData.email);
+      formDataToSend.append("phoneNumber", formData.phoneNumber);
+      formDataToSend.append("about", formData.about);
+      formDataToSend.append("password", formData.password);
+      formDataToSend.append("KYCStatus", formData.KYCStatus);
+      formDataToSend.append("isVerified", formData.isVerified.toString());
+      formDataToSend.append("lastSeen", formData.lastSeen);
+      formDataToSend.append("fcmToken", formData.fcmToken);
 
       if (profileImage) {
         formDataToSend.append("profileImage", profileImage);
       }
 
-      const response = await fetch(`${BASE_URL}/api/user`, {
+      const response = await fetch(`${BASE_URL}/api/admin/user`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           Accept: "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: formDataToSend,
       });
@@ -172,6 +177,7 @@ function Users() {
         KYCStatus: "pending",
         isVerified: false,
         lastSeen: "",
+        fcmToken: "",
       });
       setProfileImage(null);
       showSnackbar("User created successfully");
@@ -186,11 +192,15 @@ function Users() {
       const token = localStorage.getItem("token");
 
       const formDataToSend = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          formDataToSend.append(key, value);
-        }
-      });
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("email", formData.email);
+      formDataToSend.append("phoneNumber", formData.phoneNumber);
+      formDataToSend.append("about", formData.about);
+      formDataToSend.append("password", formData.password);
+      formDataToSend.append("KYCStatus", formData.KYCStatus);
+      formDataToSend.append("isVerified", formData.isVerified.toString());
+      formDataToSend.append("lastSeen", formData.lastSeen);
+      formDataToSend.append("fcmToken", formData.fcmToken);
 
       if (profileImage) {
         formDataToSend.append("profileImage", profileImage);
@@ -247,6 +257,7 @@ function Users() {
       KYCStatus: user.KYCStatus || "pending",
       isVerified: user.isVerified || false,
       lastSeen: user.lastSeen || "",
+      fcmToken: user.fcmToken || "",
     });
     setOpenEditDialog(true);
   };
@@ -338,7 +349,7 @@ function Users() {
           color="error"
           onClick={() => handleAllocateSubscription(row.original)}
         >
-          subscribe
+          Subscribe
         </Button>
       ),
     },
@@ -505,6 +516,16 @@ function Users() {
             onChange={handleInputChange}
             sx={{ mb: 2 }}
           />
+          <TextField
+            margin="dense"
+            name="fcmToken"
+            label="FCM Token"
+            type="text"
+            fullWidth
+            value={formData.fcmToken}
+            onChange={handleInputChange}
+            sx={{ mb: 2 }}
+          />
           <input
             accept="image/*"
             style={{ display: "none" }}
@@ -598,6 +619,16 @@ function Users() {
             type="text"
             fullWidth
             value={formData.KYCStatus}
+            onChange={handleInputChange}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            name="fcmToken"
+            label="FCM Token"
+            type="text"
+            fullWidth
+            value={formData.fcmToken}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
           />
@@ -727,6 +758,7 @@ Users.propTypes = {
       KYCStatus: PropTypes.string,
       isVerified: PropTypes.bool,
       lastSeen: PropTypes.string,
+      fcmToken: PropTypes.string,
     }).isRequired,
   }).isRequired,
 };

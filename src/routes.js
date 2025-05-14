@@ -21,6 +21,7 @@ import AudioNotifications from "layouts/tables/audionotifications";
 import TransactionManagement from "layouts/tables/transactions";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import Messages from "layouts/tables/message-crud";
+import YouTubeLiveStreams from "layouts/tables/live-stream";
 
 // Define routes
 const routes = [
@@ -144,6 +145,14 @@ const routes = [
     route: "/wallet-history",
     component: <WalletHistory />,
   },
+  // {
+  //   type: "collapse",
+  //   name: "Stream ",
+  //   key: "Stream",
+  //   icon: <Icon fontSize="small">subscriptions</Icon>,
+  //   route: "/stream",
+  //   component: <YouTubeLiveStreams />,
+  // },
   {
     route: "/authentication/sign-in",
     component: <SignIn />,

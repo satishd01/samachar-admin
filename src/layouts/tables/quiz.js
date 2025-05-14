@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
 import {
   Grid,
@@ -21,23 +20,20 @@ import {
   Select,
   CircularProgress,
   TablePagination,
+  Box,
 } from "@mui/material";
-import AddCircleIcon from "@mui/icons-material/AddCircle";
+import { AddCircle, Delete, Edit } from "@mui/icons-material";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
 function QuizManagement() {
   const navigate = useNavigate();
-  const theme = useTheme();
   const [state, setState] = useState({
     quizzes: [],
     loading: true,
@@ -59,8 +55,8 @@ function QuizManagement() {
       formData: {
         title: "",
         description: "",
-        startTime: new Date(),
-        endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // Default to 2 days from now
+        startTime: "",
+        endTime: "",
       },
     },
     addQuestion: {
@@ -73,6 +69,7 @@ function QuizManagement() {
         points: 10,
       },
     },
+    confirmDelete: null,
   });
 
   useEffect(() => {
@@ -146,21 +143,13 @@ function QuizManagement() {
         return;
       }
 
-      // Format dates to ISO string in UTC timezone
-      const formattedData = {
-        title: dialogState.createQuiz.formData.title,
-        description: dialogState.createQuiz.formData.description,
-        startTime: dialogState.createQuiz.formData.startTime.toISOString(),
-        endTime: dialogState.createQuiz.formData.endTime.toISOString(),
-      };
-
       const response = await fetch(`${BASE_URL}/api/quizzes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formattedData),
+        body: JSON.stringify(dialogState.createQuiz.formData),
       });
 
       if (!response.ok) {
@@ -170,7 +159,7 @@ function QuizManagement() {
 
       const data = await response.json();
       if (data.success) {
-        await fetchQuizzes(); // Refresh the list from backend
+        await fetchQuizzes();
         setDialogState((prev) => ({
           ...prev,
           createQuiz: {
@@ -178,8 +167,8 @@ function QuizManagement() {
             formData: {
               title: "",
               description: "",
-              startTime: new Date(),
-              endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+              startTime: "",
+              endTime: "",
             },
           },
         }));
@@ -245,6 +234,39 @@ function QuizManagement() {
     }
   };
 
+  const handleDeleteQuiz = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showSnackbar("No token found, please login again", "error");
+        navigate("/authentication/sign-in");
+        return;
+      }
+
+      const response = await fetch(`${BASE_URL}/api/quizzes/${dialogState.confirmDelete}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete quiz");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        showSnackbar("Quiz deleted successfully");
+        setDialogState((prev) => ({ ...prev, confirmDelete: null }));
+        fetchQuizzes();
+      }
+    } catch (error) {
+      console.error("Error deleting quiz:", error);
+      showSnackbar(error.message || "Error deleting quiz", "error");
+    }
+  };
+
   const handleInputChange = (e, formType) => {
     const { name, value } = e.target;
     setDialogState((prev) => ({
@@ -274,19 +296,6 @@ function QuizManagement() {
         },
       };
     });
-  };
-
-  const handleDateChange = (name, date, formType) => {
-    setDialogState((prev) => ({
-      ...prev,
-      [formType]: {
-        ...prev[formType],
-        formData: {
-          ...prev[formType].formData,
-          [name]: date,
-        },
-      },
-    }));
   };
 
   const handleChangePage = (event, newPage) => {
@@ -333,29 +342,42 @@ function QuizManagement() {
       ),
     },
     {
-      Header: "Add Question",
+      Header: "Actions",
       accessor: "actions",
       Cell: ({ row }) => (
-        <IconButton
-          color="primary"
-          onClick={() =>
-            setDialogState((prev) => ({
-              ...prev,
-              addQuestion: {
-                open: true,
-                quizId: row.original.id,
-                formData: {
-                  text: "",
-                  options: ["", "", "", ""],
-                  correctAnswer: 0,
-                  points: 10,
+        <Box display="flex" gap={1}>
+          <IconButton
+            color="primary"
+            onClick={() =>
+              setDialogState((prev) => ({
+                ...prev,
+                addQuestion: {
+                  open: true,
+                  quizId: row.original.id,
+                  formData: {
+                    text: "",
+                    options: ["", "", "", ""],
+                    correctAnswer: 0,
+                    points: 10,
+                  },
                 },
-              },
-            }))
-          }
-        >
-          <AddCircleIcon />
-        </IconButton>
+              }))
+            }
+          >
+            <AddCircle />
+          </IconButton>
+          <IconButton
+            color="error"
+            onClick={() =>
+              setDialogState((prev) => ({
+                ...prev,
+                confirmDelete: row.original.id,
+              }))
+            }
+          >
+            <Delete />
+          </IconButton>
+        </Box>
       ),
     },
   ];
@@ -368,7 +390,6 @@ function QuizManagement() {
     );
   });
 
-  // Apply pagination
   const paginatedQuizzes = filteredQuizzes.slice(
     state.pagination.page * state.pagination.rowsPerPage,
     state.pagination.page * state.pagination.rowsPerPage + state.pagination.rowsPerPage
@@ -487,13 +508,6 @@ function QuizManagement() {
         }
         fullWidth
         maxWidth="sm"
-        sx={{
-          "& .MuiDialog-container": {
-            "& .MuiPaper-root": {
-              maxHeight: "80vh", // Limit modal height
-            },
-          },
-        }}
       >
         <DialogTitle>Create New Quiz</DialogTitle>
         <DialogContent dividers>
@@ -508,42 +522,26 @@ function QuizManagement() {
             onChange={(e) => handleInputChange(e, "createQuiz")}
             required
           />
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DateTimePicker
-              label="Start Time (UTC)"
-              value={dialogState.createQuiz.formData.startTime}
-              onChange={(date) => handleDateChange("startTime", date, "createQuiz")}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  fullWidth
-                  margin="normal"
-                  helperText="Date and time in UTC timezone"
-                />
-              )}
-              minDateTime={new Date()}
-              PopperProps={{
-                placement: "bottom-start", // Ensure calendar opens above the input
-              }}
-            />
-            <DateTimePicker
-              label="End Time (UTC)"
-              value={dialogState.createQuiz.formData.endTime}
-              onChange={(date) => handleDateChange("endTime", date, "createQuiz")}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  fullWidth
-                  margin="normal"
-                  helperText="Date and time in UTC timezone"
-                />
-              )}
-              minDateTime={dialogState.createQuiz.formData.startTime}
-              PopperProps={{
-                placement: "bottom-end", // Ensure calendar opens above the input
-              }}
-            />
-          </LocalizationProvider>
+          <TextField
+            margin="normal"
+            name="startTime"
+            label="Start Time (YYYY-MM-DDTHH:MM)"
+            type="datetime-local"
+            fullWidth
+            value={dialogState.createQuiz.formData.startTime}
+            onChange={(e) => handleInputChange(e, "createQuiz")}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            margin="normal"
+            name="endTime"
+            label="End Time (YYYY-MM-DDTHH:MM)"
+            type="datetime-local"
+            fullWidth
+            value={dialogState.createQuiz.formData.endTime}
+            onChange={(e) => handleInputChange(e, "createQuiz")}
+            InputLabelProps={{ shrink: true }}
+          />
           <TextField
             margin="normal"
             name="description"
@@ -570,7 +568,16 @@ function QuizManagement() {
           >
             Cancel
           </Button>
-          <Button onClick={handleCreateQuiz} color="error" variant="contained">
+          <Button
+            onClick={handleCreateQuiz}
+            color="error"
+            variant="contained"
+            disabled={
+              !dialogState.createQuiz.formData.title ||
+              !dialogState.createQuiz.formData.startTime ||
+              !dialogState.createQuiz.formData.endTime
+            }
+          >
             Create Quiz
           </Button>
         </DialogActions>
@@ -621,7 +628,6 @@ function QuizManagement() {
               value={dialogState.addQuestion.formData.correctAnswer}
               onChange={(e) => handleInputChange(e, "addQuestion")}
               label="Correct Answer"
-              sx={{ width: "100%", height: 35 }}
             >
               {dialogState.addQuestion.formData.options.map((option, index) => (
                 <MenuItem key={index} value={index} disabled={!option.trim()}>
@@ -668,6 +674,25 @@ function QuizManagement() {
         </DialogActions>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={Boolean(dialogState.confirmDelete)}
+        onClose={() => setDialogState((prev) => ({ ...prev, confirmDelete: null }))}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <MDTypography>Are you sure you want to delete this quiz?</MDTypography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogState((prev) => ({ ...prev, confirmDelete: null }))}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteQuiz} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={state.snackbar.open}
         autoHideDuration={6000}
@@ -688,17 +713,20 @@ function QuizManagement() {
   );
 }
 
-QuizManagement.propTypes = {
-  row: PropTypes.shape({
-    original: PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      title: PropTypes.string.isRequired,
-      description: PropTypes.string.isRequired,
-      startTime: PropTypes.string.isRequired,
-      endTime: PropTypes.string.isRequired,
-      isActive: PropTypes.bool.isRequired,
-    }).isRequired,
+// PropTypes validation
+const QuizRowPropTypes = {
+  original: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    startTime: PropTypes.string.isRequired,
+    endTime: PropTypes.string.isRequired,
+    isActive: PropTypes.bool.isRequired,
   }).isRequired,
+};
+
+QuizManagement.propTypes = {
+  row: PropTypes.shape(QuizRowPropTypes),
   value: PropTypes.any,
 };
 
