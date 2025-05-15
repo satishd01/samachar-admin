@@ -655,18 +655,20 @@ function TransactionManagement() {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} md={3}>
+                  <Grid item xs={12} md={2}>
+                    <InputLabel>From</InputLabel>
                     <TextField
-                      label="Start Date"
+                      label=""
                       type="date"
                       value={filters.startDate ? filters.startDate.toISOString().split("T")[0] : ""}
                       onChange={(e) => handleDateChange("startDate", new Date(e.target.value))}
                       fullWidth
                     />
                   </Grid>
-                  <Grid item xs={12} md={3}>
+                  <Grid item xs={12} md={2}>
+                    <InputLabel>To</InputLabel>
                     <TextField
-                      label="End Date"
+                      label=""
                       type="date"
                       value={filters.endDate ? filters.endDate.toISOString().split("T")[0] : ""}
                       onChange={(e) => handleDateChange("endDate", new Date(e.target.value))}

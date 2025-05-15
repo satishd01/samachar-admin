@@ -145,14 +145,14 @@ const routes = [
     route: "/wallet-history",
     component: <WalletHistory />,
   },
-  // {
-  //   type: "collapse",
-  //   name: "Stream ",
-  //   key: "Stream",
-  //   icon: <Icon fontSize="small">subscriptions</Icon>,
-  //   route: "/stream",
-  //   component: <YouTubeLiveStreams />,
-  // },
+  {
+    type: "collapse",
+    name: "Stream ",
+    key: "Stream",
+    icon: <Icon fontSize="small">subscriptions</Icon>,
+    route: "/stream",
+    component: <YouTubeLiveStreams />,
+  },
   {
     route: "/authentication/sign-in",
     component: <SignIn />,

@@ -125,9 +125,9 @@ function Header({ children }) {
         <MDBox display="flex" justifyContent="flex-end" mt={2}>
           <IconButton onClick={handleLogout} color="primary">
             <PowerSettingsNewIcon /> {/* Replace with new icon */}
-            <MDTypography variant="button" color="text" fontWeight="regular">
+            {/* <MDTypography variant="button" color="text" fontWeight="regular">
               Logout
-            </MDTypography>
+            </MDTypography> */}
           </IconButton>
         </MDBox>
         {children}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
@@ -19,12 +19,23 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import * as XLSX from "xlsx";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import DescriptionIcon from "@mui/icons-material/Description";
 import GetAppIcon from "@mui/icons-material/GetApp";
-import { MenuItem } from "@mui/material";
+import { MenuItem, TablePagination } from "@mui/material";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const ITEMS_PER_PAGE_OPTIONS = [5, 10, 25, 50, 100];
+
+const initialFormData = {
+  name: "",
+  email: "",
+  phoneNumber: "",
+  about: "",
+  password: "",
+  KYCStatus: "pending",
+  isVerified: false,
+  lastSeen: "",
+  fcmToken: "",
+};
 
 function Users() {
   const navigate = useNavigate();
@@ -43,17 +54,7 @@ function Users() {
     message: "",
     severity: "success",
   });
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phoneNumber: "",
-    about: "",
-    password: "",
-    KYCStatus: "pending",
-    isVerified: false,
-    lastSeen: "",
-    fcmToken: "",
-  });
+  const [formData, setFormData] = useState(initialFormData);
   const [subscriptionData, setSubscriptionData] = useState({
     userId: "",
     groupId: "",
@@ -61,6 +62,34 @@ function Users() {
     startDate: new Date().toISOString().split("T")[0],
     endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split("T")[0],
   });
+
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(ITEMS_PER_PAGE_OPTIONS[0]);
+
+  const filteredUsers = useMemo(() => {
+    const searchTermLower = searchTerm.toLowerCase();
+    return users.filter((user) => {
+      return (
+        (user.name && user.name.toLowerCase().includes(searchTermLower)) ||
+        (user.email && user.email.toLowerCase().includes(searchTermLower)) ||
+        (user.phoneNumber && user.phoneNumber.toLowerCase().includes(searchTermLower))
+      );
+    });
+  }, [users, searchTerm]);
+
+  const paginatedUsers = useMemo(() => {
+    return filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }, [filteredUsers, page, rowsPerPage]);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -77,6 +106,7 @@ function Users() {
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
         showSnackbar("No token found, please login again", "error");
@@ -99,6 +129,8 @@ function Users() {
     } catch (error) {
       console.error("Error fetching user data:", error);
       showSnackbar("Error fetching users", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -137,15 +169,11 @@ function Users() {
       }
 
       const formDataToSend = new FormData();
-      formDataToSend.append("name", formData.name);
-      formDataToSend.append("email", formData.email);
-      formDataToSend.append("phoneNumber", formData.phoneNumber);
-      formDataToSend.append("about", formData.about);
-      formDataToSend.append("password", formData.password);
-      formDataToSend.append("KYCStatus", formData.KYCStatus);
-      formDataToSend.append("isVerified", formData.isVerified.toString());
-      formDataToSend.append("lastSeen", formData.lastSeen);
-      formDataToSend.append("fcmToken", formData.fcmToken);
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formDataToSend.append(key, value);
+        }
+      });
 
       if (profileImage) {
         formDataToSend.append("profileImage", profileImage);
@@ -168,19 +196,10 @@ function Users() {
       const data = await response.json();
       setUsers([...users, data]);
       setOpenCreateDialog(false);
-      setFormData({
-        name: "",
-        email: "",
-        phoneNumber: "",
-        about: "",
-        password: "",
-        KYCStatus: "pending",
-        isVerified: false,
-        lastSeen: "",
-        fcmToken: "",
-      });
+      setFormData(initialFormData);
       setProfileImage(null);
       showSnackbar("User created successfully");
+      setPage(0); // Reset to first page after creating new user
     } catch (error) {
       console.error("Error creating user:", error);
       showSnackbar(error.message || "Error creating user", "error");
@@ -192,15 +211,11 @@ function Users() {
       const token = localStorage.getItem("token");
 
       const formDataToSend = new FormData();
-      formDataToSend.append("name", formData.name);
-      formDataToSend.append("email", formData.email);
-      formDataToSend.append("phoneNumber", formData.phoneNumber);
-      formDataToSend.append("about", formData.about);
-      formDataToSend.append("password", formData.password);
-      formDataToSend.append("KYCStatus", formData.KYCStatus);
-      formDataToSend.append("isVerified", formData.isVerified.toString());
-      formDataToSend.append("lastSeen", formData.lastSeen);
-      formDataToSend.append("fcmToken", formData.fcmToken);
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formDataToSend.append(key, value);
+        }
+      });
 
       if (profileImage) {
         formDataToSend.append("profileImage", profileImage);
@@ -233,10 +248,10 @@ function Users() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -317,7 +332,7 @@ function Users() {
   };
 
   const exportToExcel = () => {
-    const excelData = users.map((user) => ({
+    const excelData = filteredUsers.map((user) => ({
       Name: user.name,
       Email: user.email,
       "Phone Number": user.phoneNumber,
@@ -344,37 +359,26 @@ function Users() {
     {
       Header: "Actions",
       Cell: ({ row }) => (
-        <Button
-          variant="contained"
-          color="error"
-          onClick={() => handleAllocateSubscription(row.original)}
-        >
-          Subscribe
-        </Button>
+        <div>
+          {/* <Button
+            variant="contained"
+            color="primary"
+            onClick={() => handleEditClick(row.original)}
+            sx={{ mr: 1 }}
+          >
+            Edit
+          </Button> */}
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => handleAllocateSubscription(row.original)}
+          >
+            Subscribe
+          </Button>
+        </div>
       ),
     },
   ];
-
-  const filteredUsers = users.filter((user) => {
-    const searchTermLower = searchTerm.toLowerCase();
-    return (
-      (user.name && user.name.toLowerCase().includes(searchTermLower)) ||
-      (user.email && user.email.toLowerCase().includes(searchTermLower)) ||
-      (user.phoneNumber && user.phoneNumber.toLowerCase().includes(searchTermLower))
-    );
-  });
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <DashboardNavbar />
-        <MDBox pt={6} pb={3}>
-          <MDTypography>Loading Users...</MDTypography>
-        </MDBox>
-        <Footer />
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>
@@ -408,7 +412,10 @@ function Users() {
                       type="text"
                       fullWidth
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setPage(0);
+                      }}
                       sx={{
                         mr: 2,
                         width: { xs: "100%", sm: 200 },
@@ -419,13 +426,17 @@ function Users() {
                     />
                     <Button
                       variant="contained"
+                      color="error"
+                      onClick={() => setOpenCreateDialog(true)}
+                      sx={{ mr: 2 }}
+                    >
+                      Create User
+                    </Button>
+                    <Button
+                      variant="contained"
                       color="success"
-                      startIcon={<GetAppIcon color="success" />}
+                      startIcon={<GetAppIcon />}
                       onClick={exportToExcel}
-                      sx={{
-                        textTransform: "none",
-                        ml: 2,
-                      }}
                     >
                       Export
                     </Button>
@@ -434,11 +445,20 @@ function Users() {
               </MDBox>
               <MDBox pt={3}>
                 <DataTable
-                  table={{ columns, rows: filteredUsers }}
+                  table={{ columns, rows: paginatedUsers }}
                   isSorted={false}
                   entriesPerPage={false}
                   showTotalEntries={false}
                   noEndBorder
+                />
+                <TablePagination
+                  rowsPerPageOptions={ITEMS_PER_PAGE_OPTIONS}
+                  component="div"
+                  count={filteredUsers.length}
+                  rowsPerPage={rowsPerPage}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
                 />
               </MDBox>
             </Card>
@@ -465,6 +485,7 @@ function Users() {
             value={formData.name}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
+            required
           />
           <TextField
             margin="dense"
@@ -475,6 +496,7 @@ function Users() {
             value={formData.email}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
+            required
           />
           <TextField
             margin="dense"
@@ -485,6 +507,7 @@ function Users() {
             value={formData.phoneNumber}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
+            required
           />
           <TextField
             margin="dense"
@@ -505,17 +528,35 @@ function Users() {
             value={formData.password}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
+            required
           />
           <TextField
             margin="dense"
             name="KYCStatus"
             label="KYC Status"
-            type="text"
+            select
             fullWidth
             value={formData.KYCStatus}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
-          />
+          >
+            <MenuItem value="pending">Pending</MenuItem>
+            <MenuItem value="verified">Verified</MenuItem>
+            <MenuItem value="rejected">Rejected</MenuItem>
+          </TextField>
+          <TextField
+            margin="dense"
+            name="isVerified"
+            label="Verified"
+            select
+            fullWidth
+            value={formData.isVerified}
+            onChange={handleInputChange}
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value={false}>No</MenuItem>
+            <MenuItem value={true}>Yes</MenuItem>
+          </TextField>
           <TextField
             margin="dense"
             name="fcmToken"
@@ -571,6 +612,7 @@ function Users() {
             value={formData.name}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
+            required
           />
           <TextField
             margin="dense"
@@ -581,6 +623,7 @@ function Users() {
             value={formData.email}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
+            required
           />
           <TextField
             margin="dense"
@@ -591,6 +634,7 @@ function Users() {
             value={formData.phoneNumber}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
+            required
           />
           <TextField
             margin="dense"
@@ -616,12 +660,29 @@ function Users() {
             margin="dense"
             name="KYCStatus"
             label="KYC Status"
-            type="text"
+            select
             fullWidth
             value={formData.KYCStatus}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
-          />
+          >
+            <MenuItem value="pending">Pending</MenuItem>
+            <MenuItem value="verified">Verified</MenuItem>
+            <MenuItem value="rejected">Rejected</MenuItem>
+          </TextField>
+          <TextField
+            margin="dense"
+            name="isVerified"
+            label="Verified"
+            select
+            fullWidth
+            value={formData.isVerified}
+            onChange={handleInputChange}
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value={false}>No</MenuItem>
+            <MenuItem value={true}>Yes</MenuItem>
+          </TextField>
           <TextField
             margin="dense"
             name="fcmToken"
@@ -640,7 +701,7 @@ function Users() {
             onChange={handleFileChange}
           />
           <label htmlFor="edit-profile-image-upload">
-            <Button variant="contained" color="error" component="span" sx={{ mb: 2 }}>
+            <Button variant="contained" color="primary" component="span" sx={{ mb: 2 }}>
               Change Profile Image
             </Button>
           </label>
@@ -652,7 +713,7 @@ function Users() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenEditDialog(false)}>Cancel</Button>
-          <Button onClick={handleUpdateUser} color="error" variant="contained">
+          <Button onClick={handleUpdateUser} color="primary" variant="contained">
             Update
           </Button>
         </DialogActions>
@@ -671,12 +732,12 @@ function Users() {
             margin="dense"
             name="groupId"
             label="Group"
-            type="text"
+            select
             fullWidth
             value={subscriptionData.groupId}
             onChange={handleSubscriptionInputChange}
-            select
-            sx={{ mb: 2, width: 200, height: 30 }}
+            sx={{ mb: 2 }}
+            required
           >
             {groups.map((group) => (
               <MenuItem key={group.id} value={group.id}>
@@ -688,12 +749,12 @@ function Users() {
             margin="dense"
             name="frequency"
             label="Frequency"
-            type="text"
+            select
             fullWidth
             value={subscriptionData.frequency}
             onChange={handleSubscriptionInputChange}
-            select
             sx={{ mb: 2 }}
+            required
           >
             <MenuItem value="one_month">One Month</MenuItem>
             <MenuItem value="two_month">Two Months</MenuItem>
@@ -710,6 +771,10 @@ function Users() {
             value={subscriptionData.startDate}
             onChange={handleSubscriptionInputChange}
             sx={{ mb: 2 }}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            required
           />
           <TextField
             margin="dense"
@@ -720,6 +785,10 @@ function Users() {
             value={subscriptionData.endDate}
             onChange={handleSubscriptionInputChange}
             sx={{ mb: 2 }}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            required
           />
         </DialogContent>
         <DialogActions>
