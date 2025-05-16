@@ -197,7 +197,7 @@ function GroupsWithMessages() {
       formDataToSend.append("stopLoss", formData.stopLoss);
       formDataToSend.append("reason", formData.reason);
       formDataToSend.append("discriminator", formData.discriminator);
-      formDataToSend.append("sebzRegistration", formData.sebzRegistration);
+      formDataToSend.append("sebzRegistration", formData.sebzRegistration || "8484998474");
       formDataToSend.append("adminId", localStorage.getItem("id"));
       formDataToSend.append("groupId", dialogState.selectedGroupId);
 
@@ -302,7 +302,7 @@ function GroupsWithMessages() {
       stopLoss: "",
       reason: "",
       discriminator: "",
-      sebzRegistration: "",
+      sebzRegistration: "8484998474",
       audioId: "",
     });
   };

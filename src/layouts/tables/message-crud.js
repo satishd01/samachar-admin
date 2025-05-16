@@ -257,7 +257,10 @@ function Messages() {
       formDataToSend.append("stopLoss", dialogState.formData.stopLoss);
       formDataToSend.append("reason", dialogState.formData.reason);
       formDataToSend.append("discriminator", dialogState.formData.discriminator);
-      formDataToSend.append("sebzRegistration", dialogState.formData.sebzRegistration);
+      formDataToSend.append(
+        "sebzRegistration",
+        dialogState.formData.sebzRegistration || "8484998474"
+      );
       formDataToSend.append("adminId", localStorage.getItem("id"));
       formDataToSend.append("groupId", state.selectedGroupId);
 
@@ -422,7 +425,7 @@ function Messages() {
           stopLoss: message.stopLoss,
           reason: message.reason,
           discriminator: message.discriminator,
-          sebzRegistration: message.sebzRegistration,
+          sebzRegistration: message.sebzRegistration || "8484998474",
           audioId: message.audioId || "",
           images: Array(5).fill(null),
           imagePreviews: [
@@ -456,7 +459,7 @@ function Messages() {
           stopLoss: "",
           reason: "",
           discriminator: "",
-          sebzRegistration: "",
+          sebzRegistration: "8484998474",
           audioId: "",
           images: Array(5).fill(null),
           imagePreviews: Array(5).fill(null),
@@ -481,7 +484,7 @@ function Messages() {
         stopLoss: "",
         reason: "",
         discriminator: "",
-        sebzRegistration: "",
+        sebzRegistration: "8484998474",
         audioId: "",
         images: Array(5).fill(null),
         imagePreviews: Array(5).fill(null),
