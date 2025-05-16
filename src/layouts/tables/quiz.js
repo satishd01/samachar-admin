@@ -323,13 +323,40 @@ function QuizManagement() {
     {
       Header: "Start Time",
       accessor: "startTime",
-      Cell: ({ value }) => new Date(value).toLocaleString(),
+      Cell: ({ value }) => {
+        const date = new Date(value);
+        return date.toLocaleString("en-IN", {
+          timeZone: "UTC", // Ensures UTC time is displayed
+          weekday: "short",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        });
+      },
     },
     {
       Header: "End Time",
       accessor: "endTime",
-      Cell: ({ value }) => new Date(value).toLocaleString(),
+      Cell: ({ value }) => {
+        const date = new Date(value);
+        return date.toLocaleString("en-IN", {
+          timeZone: "UTC", // Ensures UTC time is displayed
+          weekday: "short",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        });
+      },
     },
+
     {
       Header: "Status",
       accessor: "isActive",
