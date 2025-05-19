@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Button,
   TextField,
@@ -21,6 +21,8 @@ import {
   Snackbar,
   Alert,
   IconButton,
+  Autocomplete,
+  Tooltip,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -33,6 +35,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import Typography from "@mui/material/Typography";
 import logo from "assets/images/logos/logo.jpeg";
+import ClearIcon from "@mui/icons-material/Clear";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -535,7 +538,8 @@ function TransactionManagement() {
       (transaction) =>
         transaction.paymentId.toLowerCase().includes(query) ||
         transaction.userName.toLowerCase().includes(query) ||
-        transaction.userEmail.toLowerCase().includes(query)
+        transaction.userEmail.toLowerCase().includes(query) ||
+        (transaction.userPhone && transaction.userPhone.toLowerCase().includes(query))
     );
     setState((prev) => ({ ...prev, filteredTransactions: filtered }));
   };
@@ -569,14 +573,19 @@ function TransactionManagement() {
       paymentStatus: "",
       transactionType: "",
     });
-    setState((prev) => ({ ...prev, currentPage: 1 }));
+    setState((prev) => ({
+      ...prev,
+      currentPage: 1,
+      searchTerm: "",
+    }));
     fetchTransactions();
   };
 
   const columns = [
     { Header: "Transaction ID", accessor: "paymentId" },
     { Header: "Group Name", accessor: "groupName" },
-    { Header: "User", accessor: (row) => `${row.userName} (${row.userEmail})` },
+    { Header: "User", accessor: (row) => `${row.userName}` },
+    { Header: "Phone", accessor: (row) => `${row.userPhone}` },
     { Header: "Amount", accessor: (row) => `${row.amount} ${row.currency}` },
     { Header: "Type", accessor: (row) => row.metadata.notes.type },
     { Header: "Status", accessor: "paymentStatus", Cell: PaidCell },
@@ -584,12 +593,15 @@ function TransactionManagement() {
     {
       Header: "Invoice",
       accessor: (row) => (
-        <IconButton
-          onClick={() => downloadInvoice(row.userId, row.metadata.notes.groupId)}
-          color="primary"
-        >
-          <PictureAsPdfIcon />
-        </IconButton>
+        <Tooltip title="Download Invoice">
+          <IconButton
+            onClick={() => downloadInvoice(row.userId, row.metadata.notes.groupId)}
+            color="primary"
+            size="small"
+          >
+            <PictureAsPdfIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       ),
     },
   ];
@@ -598,13 +610,13 @@ function TransactionManagement() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox pt={6} pb={3}>
-        <Grid container spacing={6}>
+        <Grid container spacing={3}>
           <Grid item xs={12}>
             <Card>
               <MDBox
                 mx={2}
                 mt={-3}
-                py={3}
+                py={2}
                 px={2}
                 variant="gradient"
                 bgColor="white"
@@ -620,74 +632,144 @@ function TransactionManagement() {
                   <MDTypography variant="h6" color="black">
                     Transactions
                   </MDTypography>
-                  <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
+                  <Box display="flex" gap={1} alignItems="center">
                     <TextField
                       label="Search Transactions"
                       value={state.searchTerm}
                       onChange={handleSearchChange}
-                      sx={{ width: 300 }}
                       size="small"
+                      sx={{ width: 250 }}
+                      InputProps={{
+                        endAdornment: state.searchTerm && (
+                          <IconButton
+                            size="small"
+                            onClick={() => setState((prev) => ({ ...prev, searchTerm: "" }))}
+                          >
+                            <ClearIcon fontSize="small" />
+                          </IconButton>
+                        ),
+                      }}
                     />
-                    <Button variant="contained" color="error" onClick={resetFilters}>
-                      Reset Filters
-                    </Button>
-                  </MDBox>
+                    <Tooltip title="Reset all filters">
+                      <Button
+                        variant="contained"
+                        color="error"
+                        onClick={resetFilters}
+                        size="small"
+                        startIcon={<ClearIcon />}
+                      >
+                        Reset
+                      </Button>
+                    </Tooltip>
+                  </Box>
                 </MDBox>
               </MDBox>
-              <MDBox pt={3}>
+              <MDBox pt={2} px={2}>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>User</InputLabel>
-                      <Select
-                        name="userId"
-                        value={filters.userId}
-                        onChange={handleFilterChange}
-                        label="User"
-                        sx={{ width: 400, height: 35, ml: 1 }}
-                      >
-                        <MenuItem value="">All Users</MenuItem>
-                        {users.map((user) => (
-                          <MenuItem key={user.id} value={user.id}>
-                            {user.name} ({user.email})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                  <Grid item xs={12} md={4}>
+                    <Autocomplete
+                      options={users}
+                      getOptionLabel={(option) => `${option.name} (${option.phoneNumber})`}
+                      onChange={(event, newValue) => {
+                        handleFilterChange({
+                          target: {
+                            name: "userId",
+                            value: newValue?.id || "",
+                          },
+                        });
+                      }}
+                      value={users.find((user) => user.id === filters.userId) || null}
+                      renderInput={(params) => (
+                        <TextField {...params} label="Filter by User" size="small" fullWidth />
+                      )}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                    />
                   </Grid>
                   <Grid item xs={12} md={2}>
-                    <InputLabel>From</InputLabel>
                     <TextField
-                      label=""
+                      label="From Date"
                       type="date"
                       value={filters.startDate ? filters.startDate.toISOString().split("T")[0] : ""}
                       onChange={(e) => handleDateChange("startDate", new Date(e.target.value))}
                       fullWidth
+                      size="small"
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
                     />
                   </Grid>
                   <Grid item xs={12} md={2}>
-                    <InputLabel>To</InputLabel>
                     <TextField
-                      label=""
+                      label="To Date"
                       type="date"
                       value={filters.endDate ? filters.endDate.toISOString().split("T")[0] : ""}
                       onChange={(e) => handleDateChange("endDate", new Date(e.target.value))}
                       fullWidth
+                      size="small"
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
                     />
                   </Grid>
+                  {/* <Grid item xs={12} md={2}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Status</InputLabel>
+                      <Select
+                        name="paymentStatus"
+                        value={filters.paymentStatus}
+                        onChange={handleFilterChange}
+                        label="Status"
+                      >
+                        <MenuItem value="">All</MenuItem>
+                        <MenuItem value="paid">Paid</MenuItem>
+                        <MenuItem value="free">Free</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid> */}
+                  {/* <Grid item xs={12} md={2}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Type</InputLabel>
+                      <Select
+                        name="transactionType"
+                        value={filters.transactionType}
+                        onChange={handleFilterChange}
+                        label="Type"
+                      >
+                        <MenuItem value="">All</MenuItem>
+                        <MenuItem value="subscription">Subscription</MenuItem>
+                        <MenuItem value="one-time">One-time</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid> */}
                 </Grid>
-                {state.filteredTransactions.length > 0 ? (
-                  <DataTable
-                    table={{ columns, rows: state.filteredTransactions }}
-                    isSorted={false}
-                    entriesPerPage={false}
-                    showTotalEntries={false}
-                    noEndBorder
-                  />
+
+                {state.loading ? (
+                  <MDBox p={3} display="flex" justifyContent="center">
+                    <CircularProgress />
+                  </MDBox>
+                ) : state.filteredTransactions.length > 0 ? (
+                  <>
+                    <DataTable
+                      table={{ columns, rows: state.filteredTransactions }}
+                      isSorted={false}
+                      entriesPerPage={false}
+                      showTotalEntries={false}
+                      noEndBorder
+                    />
+                    <Box display="flex" justifyContent="center" mt={2}>
+                      <Pagination
+                        count={state.totalPages}
+                        page={state.currentPage}
+                        onChange={handlePageChange}
+                        color="primary"
+                        size="small"
+                      />
+                    </Box>
+                  </>
                 ) : (
                   <MDBox p={3} textAlign="center">
                     <MDTypography variant="body1">
-                      {state.searchTerm
+                      {state.searchTerm || Object.values(filters).some(Boolean)
                         ? "No matching transactions found"
                         : "No transactions available"}
                     </MDTypography>
@@ -710,6 +792,7 @@ function TransactionManagement() {
           onClose={handleCloseSnackbar}
           severity={state.snackbar.severity}
           sx={{ width: "100%" }}
+          size="small"
         >
           {state.snackbar.message}
         </Alert>

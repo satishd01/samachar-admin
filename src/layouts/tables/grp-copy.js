@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Button,
   Dialog,
@@ -12,6 +12,10 @@ import {
   Box,
   Chip,
   IconButton,
+  Snackbar,
+  Alert,
+  Grid,
+  Card,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -21,10 +25,6 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import { CloudUpload as CloudUploadIcon, Edit as EditIcon } from "@mui/icons-material";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
-import Grid from "@mui/material/Grid";
-import Card from "@mui/material/Card";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -35,7 +35,220 @@ PaidCell.propTypes = {
   value: PropTypes.bool.isRequired,
 };
 
-function GroupsManagement() {
+const GroupForm = ({
+  mode,
+  onSubmit,
+  onCancel,
+  formData,
+  setFormData,
+  formErrors,
+  setFormErrors,
+}) => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      onSubmit();
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {
+      name: !formData.name.trim(),
+    };
+
+    if (formData.isPaid) {
+      errors.oneMonthPrice = !formData.oneMonthPrice || isNaN(formData.oneMonthPrice);
+      errors.twoMonthPrice = !formData.twoMonthPrice || isNaN(formData.twoMonthPrice);
+      errors.threeMonthPrice = !formData.threeMonthPrice || isNaN(formData.threeMonthPrice);
+      errors.yearlyPrice = !formData.yearlyPrice || isNaN(formData.yearlyPrice);
+    }
+
+    setFormErrors(errors);
+    return !Object.values(errors).some(Boolean);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+    if (formErrors[name]) {
+      setFormErrors((prev) => ({
+        ...prev,
+        [name]: false,
+      }));
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setFormData((prev) => ({
+        ...prev,
+        groupImage: file,
+        imagePreview: URL.createObjectURL(file),
+      }));
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={6}>
+          <TextField
+            label="Name *"
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            fullWidth
+            margin="normal"
+            error={formErrors.name}
+            helperText={formErrors.name ? "Name is required" : ""}
+          />
+          <TextField
+            label="Description *"
+            name="description"
+            value={formData.description}
+            onChange={handleInputChange}
+            fullWidth
+            margin="normal"
+            multiline
+            rows={3}
+            error={formErrors.description}
+            helperText={formErrors.description ? "Description is required" : ""}
+          />
+          <Box sx={{ mt: 2 }}>
+            <input
+              accept="image/*"
+              type="file"
+              id="groupImage"
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+            <label htmlFor="groupImage">
+              <Button
+                component="span"
+                color="error"
+                variant="contained"
+                startIcon={<CloudUploadIcon />}
+              >
+                Upload Group Image
+              </Button>
+            </label>
+            {formData.groupImage && (
+              <Chip
+                label={formData.groupImage.name}
+                onDelete={() =>
+                  setFormData((prev) => ({ ...prev, groupImage: null, imagePreview: null }))
+                }
+                sx={{ mt: 1, ml: 1 }}
+              />
+            )}
+          </Box>
+          {formData.imagePreview && (
+            <Box mt={2}>
+              <img
+                src={formData.imagePreview}
+                alt="Group Preview"
+                style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "4px" }}
+              />
+            </Box>
+          )}
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.isPaid}
+                onChange={handleInputChange}
+                name="isPaid"
+                color="primary"
+              />
+            }
+            label="Paid Group"
+          />
+          {formData.isPaid && (
+            <>
+              <TextField
+                label="1 Month Price *"
+                name="oneMonthPrice"
+                type="number"
+                value={formData.oneMonthPrice}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="2 Months Price *"
+                name="twoMonthPrice"
+                type="number"
+                value={formData.twoMonthPrice}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="3 Months Price *"
+                name="threeMonthPrice"
+                type="number"
+                value={formData.threeMonthPrice}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Yearly Price *"
+                name="yearlyPrice"
+                type="number"
+                value={formData.yearlyPrice}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Custom Duration (days)"
+                name="customDuration"
+                type="number"
+                value={formData.customDuration}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Custom Price"
+                name="customPrice"
+                type="number"
+                value={formData.customPrice}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+            </>
+          )}
+        </Grid>
+      </Grid>
+      <DialogActions>
+        <Button onClick={onCancel}>Cancel</Button>
+        <Button type="submit" color="error" variant="contained" disabled={!formData.name}>
+          {mode === "create" ? "Create Group" : "Update Group"}
+        </Button>
+      </DialogActions>
+    </form>
+  );
+};
+
+GroupForm.propTypes = {
+  mode: PropTypes.string.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  formData: PropTypes.object.isRequired,
+  setFormData: PropTypes.func.isRequired,
+  formErrors: PropTypes.object.isRequired,
+  setFormErrors: PropTypes.func.isRequired,
+};
+
+const GroupsManagement = () => {
   const [state, setState] = useState({
     groups: [],
     filteredGroups: [],
@@ -50,9 +263,8 @@ function GroupsManagement() {
 
   const [dialogState, setDialogState] = useState({
     open: false,
-    mode: "create",
+    mode: "create", // 'create' or 'edit'
     currentGroup: null,
-    confirmDelete: null,
   });
 
   const [formData, setFormData] = useState({
@@ -62,17 +274,23 @@ function GroupsManagement() {
     oneMonthPrice: "",
     twoMonthPrice: "",
     threeMonthPrice: "",
-    sixMonthPrice: "",
     yearlyPrice: "",
     customPrice: "",
     customDuration: "",
     groupImage: null,
-    groupVideo: null,
     imagePreview: null,
-    videoPreview: null,
   });
 
-  const showSnackbar = (message, severity = "success") => {
+  const [formErrors, setFormErrors] = useState({
+    name: false,
+    description: false,
+    oneMonthPrice: false,
+    twoMonthPrice: false,
+    threeMonthPrice: false,
+    yearlyPrice: false,
+  });
+
+  const showSnackbar = useCallback((message, severity = "success") => {
     setState((prev) => ({
       ...prev,
       snackbar: {
@@ -81,7 +299,7 @@ function GroupsManagement() {
         severity,
       },
     }));
-  };
+  }, []);
 
   const handleCloseSnackbar = () => {
     setState((prev) => ({
@@ -93,7 +311,7 @@ function GroupsManagement() {
     }));
   };
 
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async () => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
       const token = localStorage.getItem("token");
@@ -107,6 +325,10 @@ function GroupsManagement() {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch groups");
+      }
 
       const data = await response.json();
       if (data.success && data.groups) {
@@ -124,7 +346,7 @@ function GroupsManagement() {
       showSnackbar(error.message || "Error fetching groups", "error");
       setState((prev) => ({ ...prev, loading: false }));
     }
-  };
+  }, [showSnackbar]);
 
   const handleSearchChange = (e) => {
     const query = e.target.value.toLowerCase();
@@ -158,21 +380,16 @@ function GroupsManagement() {
       formDataToSend.append("adminId", adminId);
 
       if (formData.isPaid) {
-        formDataToSend.append("oneMonthPrice", formData.oneMonthPrice || "0");
-        formDataToSend.append("twoMonthPrice", formData.twoMonthPrice || "0");
-        formDataToSend.append("threeMonthPrice", formData.threeMonthPrice || "0");
-        formDataToSend.append("sixMonthPrice", formData.sixMonthPrice || "0");
-        formDataToSend.append("yearlyPrice", formData.yearlyPrice || "0");
+        formDataToSend.append("oneMonthPrice", formData.oneMonthPrice);
+        formDataToSend.append("twoMonthPrice", formData.twoMonthPrice);
+        formDataToSend.append("threeMonthPrice", formData.threeMonthPrice);
+        formDataToSend.append("yearlyPrice", formData.yearlyPrice);
         formDataToSend.append("customPrice", formData.customPrice || "0");
         formDataToSend.append("customDuration", formData.customDuration || "0");
       }
 
       if (formData.groupImage) {
         formDataToSend.append("groupImage", formData.groupImage);
-      }
-
-      if (formData.groupVideo) {
-        formDataToSend.append("groupVideo", formData.groupVideo);
       }
 
       const url =
@@ -245,42 +462,20 @@ function GroupsManagement() {
       oneMonthPrice: "",
       twoMonthPrice: "",
       threeMonthPrice: "",
-      sixMonthPrice: "",
       yearlyPrice: "",
       customPrice: "",
       customDuration: "",
       groupImage: null,
-      groupVideo: null,
       imagePreview: null,
-      videoPreview: null,
     });
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  const handleFileChange = (e, type) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (type === "image") {
-        setFormData((prev) => ({
-          ...prev,
-          groupImage: file,
-          imagePreview: URL.createObjectURL(file),
-        }));
-      } else {
-        setFormData((prev) => ({
-          ...prev,
-          groupVideo: file,
-          videoPreview: URL.createObjectURL(file),
-        }));
-      }
-    }
+    setFormErrors({
+      name: false,
+      description: false,
+      oneMonthPrice: false,
+      twoMonthPrice: false,
+      threeMonthPrice: false,
+      yearlyPrice: false,
+    });
   };
 
   const handleEditGroup = (group) => {
@@ -296,14 +491,11 @@ function GroupsManagement() {
       oneMonthPrice: group.oneMonthPrice || "",
       twoMonthPrice: group.twoMonthPrice || "",
       threeMonthPrice: group.threeMonthPrice || "",
-      sixMonthPrice: group.sixMonthPrice || "",
       yearlyPrice: group.yearlyPrice || "",
       customPrice: group.customPrice || "",
       customDuration: group.customDuration || "",
       groupImage: null,
-      groupVideo: null,
       imagePreview: group.groupImage ? `${BASE_URL}/${group.groupImage}` : null,
-      videoPreview: group.groupVideo ? `${BASE_URL}/${group.groupVideo}` : null,
     });
   };
 
@@ -343,38 +535,43 @@ function GroupsManagement() {
     }
   };
 
-  const columns = [
-    { Header: "Group Name", accessor: "name" },
-    { Header: "Description", accessor: "description" },
-    {
-      Header: "Type",
-      accessor: "isPaid",
-      Cell: PaidCell,
-    },
-    { Header: "Members", accessor: (row) => row.members?.length || 0 },
-    {
-      Header: "Actions",
-      accessor: "actions",
-      Cell: ({ row }) => (
-        <Box display="flex" gap={1}>
-          <IconButton color="primary" onClick={() => handleEditGroup(row.original)}>
-            <EditIcon />
-          </IconButton>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={() => setDialogState((prev) => ({ ...prev, confirmDelete: row.original.id }))}
-          >
-            Delete
-          </Button>
-        </Box>
-      ),
-    },
-  ];
+  const columns = useMemo(
+    () => [
+      { Header: "Group Name", accessor: "name" },
+      { Header: "Description", accessor: "description" },
+      {
+        Header: "Type",
+        accessor: "isPaid",
+        Cell: PaidCell,
+      },
+      { Header: "Members", accessor: (row) => row.members?.length || 0 },
+      {
+        Header: "Actions",
+        accessor: "actions",
+        Cell: ({ row }) => (
+          <Box display="flex" gap={1}>
+            <IconButton color="primary" onClick={() => handleEditGroup(row.original)}>
+              <EditIcon />
+            </IconButton>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() =>
+                setDialogState((prev) => ({ ...prev, confirmDelete: row.original.id }))
+              }
+            >
+              Delete
+            </Button>
+          </Box>
+        ),
+      },
+    ],
+    []
+  );
 
   useEffect(() => {
     fetchGroups();
-  }, []);
+  }, [fetchGroups]);
 
   if (state.loading && state.groups.length === 0) {
     return (
@@ -475,196 +672,19 @@ function GroupsManagement() {
           {dialogState.mode === "create" ? "Create New Group" : "Edit Group"}
         </DialogTitle>
         <DialogContent dividers>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                label="Name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                fullWidth
-                margin="normal"
-              />
-              <TextField
-                label="Description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                fullWidth
-                margin="normal"
-                multiline
-                rows={3}
-              />
-              <Box sx={{ mt: 2 }}>
-                <input
-                  accept="image/*"
-                  type="file"
-                  id="groupImage"
-                  onChange={(e) => handleFileChange(e, "image")}
-                  style={{ display: "none" }}
-                />
-                <label htmlFor="groupImage">
-                  <Button
-                    component="span"
-                    color="error"
-                    variant="contained"
-                    startIcon={<CloudUploadIcon />}
-                    sx={{ mr: 1 }}
-                  >
-                    Upload Image
-                  </Button>
-                </label>
-                <input
-                  accept="video/*"
-                  type="file"
-                  id="groupVideo"
-                  onChange={(e) => handleFileChange(e, "video")}
-                  style={{ display: "none" }}
-                />
-                <label htmlFor="groupVideo">
-                  <Button
-                    component="span"
-                    color="error"
-                    variant="contained"
-                    startIcon={<CloudUploadIcon />}
-                  >
-                    Upload Video
-                  </Button>
-                </label>
-              </Box>
-              <Box sx={{ mt: 1 }}>
-                {formData.groupImage && (
-                  <Chip
-                    label={formData.groupImage.name}
-                    onDelete={() =>
-                      setFormData((prev) => ({ ...prev, groupImage: null, imagePreview: null }))
-                    }
-                    sx={{ mr: 1 }}
-                  />
-                )}
-                {formData.groupVideo && (
-                  <Chip
-                    label={formData.groupVideo.name}
-                    onDelete={() =>
-                      setFormData((prev) => ({ ...prev, groupVideo: null, videoPreview: null }))
-                    }
-                  />
-                )}
-              </Box>
-              {formData.imagePreview && (
-                <Box mt={2}>
-                  <img
-                    src={formData.imagePreview}
-                    alt="Group Preview"
-                    style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "4px" }}
-                  />
-                </Box>
-              )}
-              {formData.videoPreview && (
-                <Box mt={2}>
-                  <video
-                    controls
-                    src={formData.videoPreview}
-                    style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "4px" }}
-                  />
-                </Box>
-              )}
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isPaid}
-                    onChange={handleInputChange}
-                    name="isPaid"
-                    color="primary"
-                  />
-                }
-                label="Paid Group"
-              />
-              {formData.isPaid && (
-                <>
-                  <TextField
-                    label="1 Month Price"
-                    name="oneMonthPrice"
-                    type="number"
-                    value={formData.oneMonthPrice}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                  />
-                  <TextField
-                    label="2 Months Price"
-                    name="twoMonthPrice"
-                    type="number"
-                    value={formData.twoMonthPrice}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                  />
-                  <TextField
-                    label="3 Months Price"
-                    name="threeMonthPrice"
-                    type="number"
-                    value={formData.threeMonthPrice}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                  />
-                  <TextField
-                    label="6 Months Price"
-                    name="sixMonthPrice"
-                    type="number"
-                    value={formData.sixMonthPrice}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                  />
-                  <TextField
-                    label="Yearly Price"
-                    name="yearlyPrice"
-                    type="number"
-                    value={formData.yearlyPrice}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                  />
-                  <TextField
-                    label="Custom Duration (days)"
-                    name="customDuration"
-                    type="number"
-                    value={formData.customDuration}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                  />
-                  <TextField
-                    label="Custom Price"
-                    name="customPrice"
-                    type="number"
-                    value={formData.customPrice}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                  />
-                </>
-              )}
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
+          <GroupForm
+            mode={dialogState.mode}
+            onSubmit={handleSubmitGroup}
+            onCancel={() => {
               setDialogState((prev) => ({ ...prev, open: false }));
               resetForm();
             }}
-          >
-            Cancel
-          </Button>
-          <Button onClick={handleSubmitGroup} color="error" variant="contained">
-            {dialogState.mode === "create" ? "Create Group" : "Update Group"}
-          </Button>
-        </DialogActions>
+            formData={formData}
+            setFormData={setFormData}
+            formErrors={formErrors}
+            setFormErrors={setFormErrors}
+          />
+        </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
@@ -706,7 +726,7 @@ function GroupsManagement() {
       </Snackbar>
     </DashboardLayout>
   );
-}
+};
 
 GroupsManagement.propTypes = {
   row: PropTypes.shape({
@@ -718,12 +738,10 @@ GroupsManagement.propTypes = {
       oneMonthPrice: PropTypes.number,
       twoMonthPrice: PropTypes.number,
       threeMonthPrice: PropTypes.number,
-      sixMonthPrice: PropTypes.number,
       yearlyPrice: PropTypes.number,
       customPrice: PropTypes.number,
       customDuration: PropTypes.number,
       groupImage: PropTypes.string,
-      groupVideo: PropTypes.string,
       members: PropTypes.array,
     }).isRequired,
   }).isRequired,

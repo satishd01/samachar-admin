@@ -16,6 +16,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Switch,
+  FormGroup,
+  FormControlLabel,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -67,9 +70,12 @@ function GroupsWithMessages() {
     target2: "",
     stopLoss: "",
     reason: "",
-    discriminator: "",
-    sebzRegistration: "8484998474",
+    discriminator: "https://commoditysamachar.com/disclosures-and-disclaimers/",
+    sebzRegistration: "INH000017781",
     audioId: "",
+    document: null,
+    link: "",
+    share_message: false,
   });
 
   const showSnackbar = (message, severity = "success") => {
@@ -197,7 +203,7 @@ function GroupsWithMessages() {
       formDataToSend.append("stopLoss", formData.stopLoss);
       formDataToSend.append("reason", formData.reason);
       formDataToSend.append("discriminator", formData.discriminator);
-      formDataToSend.append("sebzRegistration", formData.sebzRegistration || "8484998474");
+      formDataToSend.append("sebzRegistration", formData.sebzRegistration);
       formDataToSend.append("adminId", localStorage.getItem("id"));
       formDataToSend.append("groupId", dialogState.selectedGroupId);
 
@@ -205,6 +211,19 @@ function GroupsWithMessages() {
       if (formData.audioId) {
         formDataToSend.append("audioId", formData.audioId);
       }
+
+      // Append document if selected
+      if (formData.document) {
+        formDataToSend.append("document", formData.document);
+      }
+
+      // Append link if provided
+      if (formData.link) {
+        formDataToSend.append("link", formData.link);
+      }
+
+      // Append share_message
+      formDataToSend.append("share_message", formData.share_message.toString());
 
       const response = await fetch(`${BASE_URL}/api/groups/message`, {
         method: "POST",
@@ -234,19 +253,33 @@ function GroupsWithMessages() {
   const handleInputChange = (e) => {
     const { name, value, type, files } = e.target;
     if (type === "file") {
-      const index = parseInt(name.split("-")[1]);
-      const newImages = [...formData.images];
-      newImages[index] = files[0];
-      setFormData((prev) => ({
-        ...prev,
-        images: newImages,
-      }));
+      if (name === "document") {
+        setFormData((prev) => ({
+          ...prev,
+          document: files[0],
+        }));
+      } else {
+        const index = parseInt(name.split("-")[1]);
+        const newImages = [...formData.images];
+        newImages[index] = files[0];
+        setFormData((prev) => ({
+          ...prev,
+          images: newImages,
+        }));
+      }
     } else {
       setFormData((prev) => ({
         ...prev,
         [name]: value,
       }));
     }
+  };
+
+  const handleToggleChange = (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      share_message: e.target.checked,
+    }));
   };
 
   const handleOpenCreateDialog = async (groupId) => {
@@ -301,15 +334,17 @@ function GroupsWithMessages() {
       target2: "",
       stopLoss: "",
       reason: "",
-      discriminator: "",
-      sebzRegistration: "8484998474",
+      discriminator: "https://commoditysamachar.com/disclosures-and-disclaimers/",
+      sebzRegistration: "INH000017781",
       audioId: "",
+      document: null,
+      link: "",
+      share_message: false,
     });
   };
 
   const columns = [
     { Header: "Group Name", accessor: "name" },
-    { Header: "Description", accessor: "description" },
     {
       Header: "Type",
       accessor: "isPaid",
@@ -326,7 +361,7 @@ function GroupsWithMessages() {
             onClick={() => handleOpenCreateDialog(row.original.id)}
             size="small"
           >
-            send Message
+            Send Message
           </Button>
           <IconButton
             color="primary"
@@ -493,24 +528,23 @@ function GroupsWithMessages() {
                 margin="normal"
               />
               <TextField
-                label="Discriminator"
+                label="Disclaimer"
                 name="discriminator"
+                disabled
                 value={formData.discriminator}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
               />
               <TextField
-                label="SEBZ Registration"
+                label="SEBI Registration Number"
                 name="sebzRegistration"
                 disabled
-                value={formData.sebzRegistration || "8484998474"}
+                value={formData.sebzRegistration}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
               />
-
-              {/* Audio selection dropdown */}
               <FormControl fullWidth margin="normal">
                 <InputLabel>Select Audio</InputLabel>
                 <Select
@@ -531,8 +565,54 @@ function GroupsWithMessages() {
                   ))}
                 </Select>
               </FormControl>
-
-              {/* Multiple image upload fields */}
+              <TextField
+                label="Link"
+                name="link"
+                value={formData.link}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.share_message}
+                      onChange={handleToggleChange}
+                      name="share_message"
+                      color="primary"
+                    />
+                  }
+                  label="Share Message"
+                />
+              </FormGroup>
+              <input
+                accept="application/pdf"
+                type="file"
+                name="document"
+                onChange={handleInputChange}
+                style={{ display: "none" }}
+                id="messageDocument"
+              />
+              <label htmlFor="messageDocument">
+                <Button
+                  component="span"
+                  color="error"
+                  variant="contained"
+                  startIcon={<CloudUploadIcon />}
+                >
+                  Upload Document
+                </Button>
+              </label>
+              {formData.document && (
+                <Chip
+                  label={formData.document.name}
+                  onDelete={() => {
+                    setFormData((prev) => ({ ...prev, document: null }));
+                  }}
+                  sx={{ mt: 1, ml: 1 }}
+                />
+              )}
               {[0, 1, 2, 3, 4].map((index) => (
                 <Box key={index} sx={{ mt: 2 }}>
                   <input
@@ -578,12 +658,7 @@ function GroupsWithMessages() {
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleCreateMessage}
-            color="error"
-            variant="contained"
-            disabled={!formData.scriptName || !formData.actionType}
-          >
+          <Button onClick={handleCreateMessage} color="error" variant="contained">
             Send Message
           </Button>
         </DialogActions>

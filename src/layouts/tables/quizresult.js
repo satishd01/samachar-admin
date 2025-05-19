@@ -276,13 +276,13 @@ function QuizResults() {
                     {selectedQuizDetails && (
                       <MDBox px={3} pb={2}>
                         <MDTypography variant="h5">{selectedQuizDetails.title}</MDTypography>
-                        <MDTypography variant="body2" color="textSecondary">
+                        {/* <MDTypography variant="body2" color="textSecondary">
                           {selectedQuizDetails.description}
                         </MDTypography>
                         <MDTypography variant="body2">
                           {new Date(selectedQuizDetails.startTime).toLocaleString()} -{" "}
                           {new Date(selectedQuizDetails.endTime).toLocaleString()}
-                        </MDTypography>
+                        </MDTypography> */}
                         <StatusCell value={selectedQuizDetails.isActive} />
                       </MDBox>
                     )}

@@ -22,6 +22,9 @@ import TransactionManagement from "layouts/tables/transactions";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import Messages from "layouts/tables/message-crud";
 import YouTubeLiveStreams from "layouts/tables/live-stream";
+import { Feedback } from "@mui/icons-material";
+import FeedbackList from "layouts/tables/feedback";
+import FeedbackIcon from "@mui/icons-material/Feedback";
 
 // Define routes
 const routes = [
@@ -102,7 +105,7 @@ const routes = [
     name: "Message",
     key: "Message",
     icon: <Icon fontSize="small">message</Icon>,
-    route: "/message-crud",
+    route: "/messages",
     component: <Messages />,
   },
   {
@@ -152,6 +155,14 @@ const routes = [
     icon: <Icon fontSize="small">subscriptions</Icon>,
     route: "/stream",
     component: <YouTubeLiveStreams />,
+  },
+  {
+    type: "collapse",
+    name: "Feedback",
+    key: "Feedback",
+    icon: <FeedbackIcon fontSize="small" />,
+    route: "/feedback",
+    component: <FeedbackList />,
   },
   {
     route: "/authentication/sign-in",

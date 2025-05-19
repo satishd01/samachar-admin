@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Button,
   Dialog,
@@ -15,7 +15,11 @@ import {
   MenuItem,
   Box,
   Chip,
-  Avatar,
+  IconButton,
+  Tooltip,
+  Autocomplete,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -26,6 +30,12 @@ import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import { Download as DownloadIcon } from "@mui/icons-material";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import DatePicker from "@mui/lab/DatePicker";
+import AdapterDateFns from "@mui/lab/AdapterDateFns";
+import LocalizationProvider from "@mui/lab/LocalizationProvider";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -44,6 +54,11 @@ function SubscriptionManagement() {
     loading: true,
     searchTerm: "",
     selectedUserId: "",
+    statusFilter: "all",
+    dateRange: {
+      start: null,
+      end: null,
+    },
     snackbar: {
       open: false,
       message: "",
@@ -186,15 +201,108 @@ function SubscriptionManagement() {
     }
   };
 
-  const handleUserChange = (e) => {
-    const userId = e.target.value;
+  const handleUserChange = (event, newValue) => {
+    const userId = newValue?.id || "";
     setState((prev) => ({ ...prev, selectedUserId: userId }));
-    fetchSubscriptions(userId);
+    if (userId) {
+      fetchSubscriptions(userId);
+    }
   };
 
   const handleSearchChange = (e) => {
-    const query = e.target.value.toLowerCase();
-    setState((prev) => ({ ...prev, searchTerm: query }));
+    setState((prev) => ({ ...prev, searchTerm: e.target.value.toLowerCase() }));
+  };
+
+  const handleStatusFilterChange = (event, newFilter) => {
+    if (newFilter !== null) {
+      setState((prev) => ({ ...prev, statusFilter: newFilter }));
+    }
+  };
+
+  const handleDateRangeChange = (name, date) => {
+    setState((prev) => ({
+      ...prev,
+      dateRange: {
+        ...prev.dateRange,
+        [name]: date,
+      },
+    }));
+  };
+
+  const filteredSubscriptions = useMemo(() => {
+    let result = state.subscriptions;
+
+    // Apply search filter
+    if (state.searchTerm) {
+      result = result.filter((sub) => {
+        const groupName = state.groups.find((g) => g.id === sub.groupId)?.name?.toLowerCase() || "";
+        const userName = state.users.find((u) => u.id === sub.userId)?.name?.toLowerCase() || "";
+        return (
+          groupName.includes(state.searchTerm) ||
+          userName.includes(state.searchTerm) ||
+          sub.frequency.toLowerCase().includes(state.searchTerm)
+        );
+      });
+    }
+
+    // Apply status filter
+    if (state.statusFilter !== "all") {
+      result = result.filter((sub) =>
+        state.statusFilter === "active" ? sub.isActive : !sub.isActive
+      );
+    }
+
+    // Apply date range filter
+    if (state.dateRange.start) {
+      result = result.filter((sub) => new Date(sub.startDate) >= new Date(state.dateRange.start));
+    }
+    if (state.dateRange.end) {
+      result = result.filter((sub) => new Date(sub.endDate) <= new Date(state.dateRange.end));
+    }
+
+    return result;
+  }, [
+    state.subscriptions,
+    state.searchTerm,
+    state.statusFilter,
+    state.dateRange,
+    state.groups,
+    state.users,
+  ]);
+
+  const handleExportExcel = (type = "all") => {
+    let dataToExport = filteredSubscriptions;
+
+    if (type !== "all") {
+      dataToExport = dataToExport.filter((sub) =>
+        type === "active" ? sub.isActive : !sub.isActive
+      );
+    }
+
+    if (dataToExport.length === 0) {
+      showSnackbar(`No ${type} subscriptions to export`, "warning");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(
+      dataToExport.map((sub) => {
+        const group = state.groups.find((g) => g.id === sub.groupId);
+        const user = state.users.find((u) => u.id === sub.userId);
+        return {
+          "User Name": user?.name || "N/A",
+          "User Phone": user?.phoneNumber || "N/A",
+          "Group Name": group?.name || "N/A",
+          Frequency: sub.frequency,
+          "Start Date": new Date(sub.startDate).toLocaleDateString(),
+          "End Date": new Date(sub.endDate).toLocaleDateString(),
+          Status: sub.isActive ? "Active" : "Inactive",
+        };
+      })
+    );
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Subscriptions");
+    XLSX.writeFile(workbook, `subscriptions_${type}.xlsx`);
   };
 
   const validateForm = () => {
@@ -254,7 +362,7 @@ function SubscriptionManagement() {
           formData: {
             userId: "",
             groupId: "",
-            frequency: "monthly",
+            frequency: "one_month",
             startDate: new Date().toISOString().split("T")[0],
             endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
               .toISOString()
@@ -300,13 +408,20 @@ function SubscriptionManagement() {
 
   const columns = [
     {
+      Header: "User",
+      accessor: (row) => {
+        const user = state.users.find((u) => u.id === row.userId);
+        return `${user?.name || "N/A"} (${user?.phoneNumber || "N/A"})`;
+      },
+    },
+    {
       Header: "Group",
       accessor: (row) => state.groups.find((g) => g.id === row.groupId)?.name || row.groupId,
     },
     {
       Header: "Frequency",
       accessor: "frequency",
-      Cell: ({ value }) => value.charAt(0).toUpperCase() + value.slice(1),
+      Cell: ({ value }) => value.charAt(0).toUpperCase() + value.slice(1).replace("_", " "),
     },
     {
       Header: "Start Date",
@@ -350,13 +465,13 @@ function SubscriptionManagement() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox pt={6} pb={3}>
-        <Grid container spacing={6}>
+        <Grid container spacing={3}>
           <Grid item xs={12}>
             <Card>
               <MDBox
                 mx={2}
                 mt={-3}
-                py={3}
+                py={2}
                 px={2}
                 variant="gradient"
                 bgColor="white"
@@ -372,46 +487,125 @@ function SubscriptionManagement() {
                   <MDTypography variant="h6" color="black">
                     Subscription Management
                   </MDTypography>
-                  <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
-                    <TextField
-                      label="Search Subscriptions"
-                      value={state.searchTerm}
-                      onChange={handleSearchChange}
-                      sx={{ width: 300 }}
-                      size="small"
-                      disabled={!state.selectedUserId}
-                    />
+                  <Box display="flex" gap={1}>
                     <Button
                       variant="contained"
                       color="error"
                       onClick={() => setDialogState((prev) => ({ ...prev, open: true }))}
+                      size="small"
                     >
                       Create Subscription
                     </Button>
-                  </MDBox>
+                    {state.selectedUserId && (
+                      <>
+                        <Tooltip title="Export All">
+                          <IconButton
+                            onClick={() => handleExportExcel("all")}
+                            color="primary"
+                            size="small"
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Export Active Only">
+                          <IconButton
+                            onClick={() => handleExportExcel("active")}
+                            color="success"
+                            size="small"
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Export Inactive Only">
+                          <IconButton
+                            onClick={() => handleExportExcel("inactive")}
+                            color="error"
+                            size="small"
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </>
+                    )}
+                  </Box>
                 </MDBox>
               </MDBox>
-              <MDBox pt={3} px={2}>
-                <FormControl fullWidth margin="normal">
-                  <InputLabel>Select User</InputLabel>
-                  <Select
-                    value={state.selectedUserId}
-                    label="Select User"
-                    onChange={handleUserChange}
-                    sx={{ width: 300, height: 35 }}
-                  >
-                    {state.users.map((user) => (
-                      <MenuItem key={user.id} value={user.id}>
-                        {user.name} ({user.email})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              <MDBox pt={2} px={2}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Autocomplete
+                      options={state.users}
+                      getOptionLabel={(option) => `${option.name} (${option.phoneNumber})`}
+                      onChange={handleUserChange}
+                      renderInput={(params) => (
+                        <TextField {...params} label="Search User" size="small" fullWidth />
+                      )}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                    />
+                  </Grid>
+                  {/* <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      label="Search Subscriptions"
+                      value={state.searchTerm}
+                      onChange={handleSearchChange}
+                      fullWidth
+                      size="small"
+                      disabled={!state.selectedUserId}
+                    />
+                  </Grid> */}
+                  <Grid item xs={12} sm={6} md={2}>
+                    <ToggleButtonGroup
+                      value={state.statusFilter}
+                      exclusive
+                      onChange={handleStatusFilterChange}
+                      fullWidth
+                      size="small"
+                    >
+                      <ToggleButton value="all">All</ToggleButton>
+                      <ToggleButton value="active">Active</ToggleButton>
+                      <ToggleButton value="inactive">Inactive</ToggleButton>
+                    </ToggleButtonGroup>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={2}>
+                    <TextField
+                      label="Start Date"
+                      type="date"
+                      value={state.dateRange.start}
+                      onChange={(e) => handleDateRangeChange("start", e.target.value)}
+                      size="small"
+                      fullWidth
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={2}>
+                    <TextField
+                      label="End Date"
+                      type="date"
+                      value={state.dateRange.end}
+                      onChange={(e) => handleDateRangeChange("end", e.target.value)}
+                      size="small"
+                      fullWidth
+                      inputProps={{
+                        min: state.dateRange.start, // Prevent selecting an end date before start
+                      }}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                    />
+                  </Grid>
+                </Grid>
 
                 {state.selectedUserId ? (
-                  state.subscriptions.length > 0 ? (
+                  state.loading ? (
+                    <MDBox p={3} display="flex" justifyContent="center">
+                      <CircularProgress />
+                    </MDBox>
+                  ) : filteredSubscriptions.length > 0 ? (
                     <DataTable
-                      table={{ columns, rows: state.subscriptions }}
+                      table={{ columns, rows: filteredSubscriptions }}
                       isSorted={false}
                       entriesPerPage={false}
                       showTotalEntries={false}
@@ -420,7 +614,12 @@ function SubscriptionManagement() {
                   ) : (
                     <MDBox p={3} textAlign="center">
                       <MDTypography variant="body1">
-                        No subscriptions found for this user
+                        {state.searchTerm ||
+                        state.statusFilter !== "all" ||
+                        state.dateRange.start ||
+                        state.dateRange.end
+                          ? "No matching subscriptions found"
+                          : "No subscriptions found for this user"}
                       </MDTypography>
                     </MDBox>
                   )
@@ -448,7 +647,7 @@ function SubscriptionManagement() {
             formData: {
               userId: "",
               groupId: "",
-              frequency: "monthly",
+              frequency: "one_month",
               startDate: new Date().toISOString().split("T")[0],
               endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
                 .toISOString()
@@ -463,43 +662,55 @@ function SubscriptionManagement() {
         <DialogContent dividers>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <FormControl fullWidth margin="normal" error={dialogState.formErrors.userId}>
-                <InputLabel>User *</InputLabel>
-                <Select
-                  name="userId"
-                  value={dialogState.formData.userId}
-                  onChange={handleInputChange}
-                  label="User *"
-                  sx={{ width: 300, height: 35 }}
-                >
-                  {state.users.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                options={state.users}
+                getOptionLabel={(option) => `${option.name} (${option.phoneNumber})`}
+                onChange={(event, newValue) =>
+                  handleInputChange({
+                    target: {
+                      name: "userId",
+                      value: newValue?.id || "",
+                    },
+                  })
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="User *"
+                    size="small"
+                    error={dialogState.formErrors.userId}
+                    helperText={dialogState.formErrors.userId ? "User is required" : ""}
+                  />
+                )}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+              />
             </Grid>
             <Grid item xs={12}>
-              <FormControl fullWidth margin="normal" error={dialogState.formErrors.groupId}>
-                <InputLabel>Group *</InputLabel>
-                <Select
-                  name="groupId"
-                  value={dialogState.formData.groupId}
-                  onChange={handleInputChange}
-                  label="Group *"
-                  sx={{ width: 300, height: 35 }}
-                >
-                  {state.groups.map((group) => (
-                    <MenuItem key={group.id} value={group.id}>
-                      {group.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                options={state.groups}
+                getOptionLabel={(option) => option.name}
+                onChange={(event, newValue) =>
+                  handleInputChange({
+                    target: {
+                      name: "groupId",
+                      value: newValue?.id || "",
+                    },
+                  })
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Group *"
+                    size="small"
+                    error={dialogState.formErrors.groupId}
+                    helperText={dialogState.formErrors.groupId ? "Group is required" : ""}
+                  />
+                )}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+              />
             </Grid>
             <Grid item xs={12}>
-              <FormControl fullWidth margin="normal">
+              <FormControl fullWidth size="small">
                 <InputLabel>Frequency</InputLabel>
                 <Select
                   name="frequency"
@@ -508,10 +719,10 @@ function SubscriptionManagement() {
                   label="Frequency"
                   sx={{ width: 300, height: 35 }}
                 >
-                  <MenuItem value="one_month">one month</MenuItem>
-                  <MenuItem value="two_month">two month</MenuItem>
-                  <MenuItem value="three_month">three month</MenuItem>
-                  <MenuItem value="yearly">yearly</MenuItem>
+                  <MenuItem value="one_month">One Month</MenuItem>
+                  <MenuItem value="two_month">Two Months</MenuItem>
+                  <MenuItem value="three_month">Three Months</MenuItem>
+                  <MenuItem value="yearly">Yearly</MenuItem>
                   <MenuItem value="custom">Custom</MenuItem>
                 </Select>
               </FormControl>
@@ -520,10 +731,14 @@ function SubscriptionManagement() {
               <TextField
                 label="Start Date *"
                 type="date"
+                name="startDate"
                 value={dialogState.formData.startDate}
                 onChange={(e) => handleDateChange("startDate", e.target.value)}
                 fullWidth
-                margin="normal"
+                size="small"
+                InputLabelProps={{
+                  shrink: true,
+                }}
                 error={dialogState.formErrors.startDate}
                 helperText={dialogState.formErrors.startDate ? "Start date is required" : ""}
               />
@@ -532,10 +747,14 @@ function SubscriptionManagement() {
               <TextField
                 label="End Date *"
                 type="date"
+                name="endDate"
                 value={dialogState.formData.endDate}
                 onChange={(e) => handleDateChange("endDate", e.target.value)}
                 fullWidth
-                margin="normal"
+                size="small"
+                InputLabelProps={{
+                  shrink: true,
+                }}
                 error={dialogState.formErrors.endDate}
                 helperText={
                   dialogState.formErrors.endDate ? "End date must be after start date" : ""
@@ -553,7 +772,7 @@ function SubscriptionManagement() {
                 formData: {
                   userId: "",
                   groupId: "",
-                  frequency: "monthly",
+                  frequency: "one_month",
                   startDate: new Date().toISOString().split("T")[0],
                   endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
                     .toISOString()
@@ -561,6 +780,7 @@ function SubscriptionManagement() {
                 },
               }))
             }
+            size="small"
           >
             Cancel
           </Button>
@@ -568,13 +788,8 @@ function SubscriptionManagement() {
             onClick={handleCreateSubscription}
             color="error"
             variant="contained"
-            disabled={
-              !dialogState.formData.userId ||
-              !dialogState.formData.groupId ||
-              !dialogState.formData.startDate ||
-              !dialogState.formData.endDate ||
-              new Date(dialogState.formData.endDate) <= new Date(dialogState.formData.startDate)
-            }
+            size="small"
+            disabled={!dialogState.formData.userId || !dialogState.formData.groupId}
           >
             Create
           </Button>
@@ -591,6 +806,7 @@ function SubscriptionManagement() {
           onClose={handleCloseSnackbar}
           severity={state.snackbar.severity}
           sx={{ width: "100%" }}
+          size="small"
         >
           {state.snackbar.message}
         </Alert>

@@ -208,11 +208,7 @@ function NewsManagement() {
   };
 
   const validateForm = () => {
-    const errors = {
-      text: !formData.text.trim(),
-      subText: !formData.subText.trim(),
-      expireAt: !formData.expireAt,
-    };
+    const errors = {};
 
     setFormErrors(errors);
     return !Object.values(errors).some(Boolean);
@@ -547,8 +543,6 @@ function NewsManagement() {
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-                error={formErrors.text}
-                helperText={formErrors.text ? "Title is required" : ""}
               />
               <TextField
                 label="Subtext *"
@@ -559,8 +553,6 @@ function NewsManagement() {
                 margin="normal"
                 multiline
                 rows={3}
-                error={formErrors.subText}
-                helperText={formErrors.subText ? "Subtext is required" : ""}
               />
               <TextField
                 label="Expiration Date *"
@@ -571,8 +563,6 @@ function NewsManagement() {
                 fullWidth
                 margin="normal"
                 InputLabelProps={{ shrink: true }}
-                error={formErrors.expireAt}
-                helperText={formErrors.expireAt ? "Expiration date is required" : ""}
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -648,7 +638,6 @@ function NewsManagement() {
             onClick={dialogState.isEdit ? handleUpdateNews : handleCreateNews}
             color="error"
             variant="contained"
-            disabled={!formData.text || !formData.subText || !formData.expireAt}
           >
             {dialogState.isEdit ? "Update News" : "Create News"}
           </Button>

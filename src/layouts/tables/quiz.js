@@ -569,7 +569,7 @@ function QuizManagement() {
             onChange={(e) => handleInputChange(e, "createQuiz")}
             InputLabelProps={{ shrink: true }}
           />
-          <TextField
+          {/* <TextField
             margin="normal"
             name="description"
             label="Description"
@@ -579,7 +579,7 @@ function QuizManagement() {
             rows={3}
             value={dialogState.createQuiz.formData.description}
             onChange={(e) => handleInputChange(e, "createQuiz")}
-          />
+          /> */}
         </DialogContent>
         <DialogActions>
           <Button
@@ -599,11 +599,7 @@ function QuizManagement() {
             onClick={handleCreateQuiz}
             color="error"
             variant="contained"
-            disabled={
-              !dialogState.createQuiz.formData.title ||
-              !dialogState.createQuiz.formData.startTime ||
-              !dialogState.createQuiz.formData.endTime
-            }
+            disabled={!dialogState.createQuiz.formData.title}
           >
             Create Quiz
           </Button>

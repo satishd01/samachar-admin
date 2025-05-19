@@ -17,6 +17,8 @@ import {
   Chip,
   Avatar,
   Pagination,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -60,6 +62,8 @@ function SubscriptionOrders() {
       message: "",
       severity: "success",
     },
+    statusFilter: "all",
+    frequencyFilter: "all",
   });
 
   const [dialogState, setDialogState] = useState({
@@ -186,19 +190,27 @@ function SubscriptionOrders() {
     });
   };
 
+  const handleStatusFilterChange = (event, newFilter) => {
+    setState((prev) => ({ ...prev, statusFilter: newFilter }));
+  };
+
+  const handleFrequencyFilterChange = (event, newFilter) => {
+    setState((prev) => ({ ...prev, frequencyFilter: newFilter }));
+  };
+
   const columns = [
     {
       Header: "User",
-      accessor: (row) => `${row.user?.name || "N/A"} (${row.user?.phoneNumber || "N/A"})`,
+      accessor: (row) => `${row.user?.name}`,
     },
-
-    // {
-    //   Header: "Group",
-    //   accessor: (row) => {
-    //     const group = state.groups.find((g) => g.id === row.groupId);
-    //     return group ? group.name : row.groupId;
-    //   },
-    // },
+    {
+      Header: "Phone Number",
+      accessor: (row) => `${row.user?.phoneNumber}`,
+    },
+    {
+      Header: "Subscription ID",
+      accessor: "id",
+    },
     {
       Header: "Frequency",
       accessor: "frequency",
@@ -260,13 +272,21 @@ function SubscriptionOrders() {
     const user = state.users.find((u) => u.id === sub.userId);
     const group = state.groups.find((g) => g.id === sub.groupId);
 
-    return (
+    const matchesSearch =
       user?.name.toLowerCase().includes(search) ||
       user?.email.toLowerCase().includes(search) ||
       group?.name.toLowerCase().includes(search) ||
       sub.frequency.toLowerCase().includes(search) ||
-      sub.id.toLowerCase().includes(search)
-    );
+      sub.id.toLowerCase().includes(search);
+
+    const matchesStatus =
+      state.statusFilter === "all" ||
+      (state.statusFilter === "active" ? sub.isActive : !sub.isActive);
+
+    const matchesFrequency =
+      state.frequencyFilter === "all" || sub.frequency === state.frequencyFilter;
+
+    return matchesSearch && matchesStatus && matchesFrequency;
   });
 
   return (
@@ -303,6 +323,31 @@ function SubscriptionOrders() {
                       sx={{ width: 300 }}
                       size="small"
                     />
+                    <ToggleButtonGroup
+                      value={state.statusFilter}
+                      exclusive
+                      onChange={handleStatusFilterChange}
+                      aria-label="status"
+                      sx={{ width: 100, height: 35 }}
+                    >
+                      <ToggleButton value="all">All</ToggleButton>
+                      <ToggleButton value="active">Active</ToggleButton>
+                      <ToggleButton value="inactive">Inactive</ToggleButton>
+                    </ToggleButtonGroup>
+                    <ToggleButtonGroup
+                      value={state.frequencyFilter}
+                      exclusive
+                      onChange={handleFrequencyFilterChange}
+                      aria-label="frequency"
+                      sx={{ height: 35 }}
+                    >
+                      <ToggleButton value="all">All</ToggleButton>
+                      <ToggleButton value="one_month">Monthly</ToggleButton>
+                      <ToggleButton value="two_month">Two-Monthly</ToggleButton>
+                      <ToggleButton value="three_month">Three_monthly</ToggleButton>
+                      <ToggleButton value="siz_month">six_monthly</ToggleButton>
+                      <ToggleButton value="yearly">Yearly</ToggleButton>
+                    </ToggleButtonGroup>
                   </MDBox>
                 </MDBox>
               </MDBox>
@@ -351,25 +396,14 @@ function SubscriptionOrders() {
                 <MDTypography>
                   {(() => {
                     const user = state.users.find(
-                      (u) => u.id === dialogState.currentSubscription.user.name
+                      (u) => u.id === dialogState.currentSubscription.userId
                     );
                     return user
                       ? `${user.name} (${user.email})`
-                      : dialogState.currentSubscription.user.name;
+                      : dialogState.currentSubscription.userId;
                   })()}
                 </MDTypography>
               </Grid>
-              {/* <Grid item xs={12} md={6}>
-                <MDTypography variant="h6">Group:</MDTypography>
-                <MDTypography>
-                  {(() => {
-                    const group = state.groups.find(
-                      (g) => g.id === dialogState.currentSubscription.groupId
-                    );
-                    return group ? group.name : dialogState.currentSubscription.groupId;
-                  })()}
-                </MDTypography>
-              </Grid> */}
               <Grid item xs={12} md={6}>
                 <MDTypography variant="h6">Frequency:</MDTypography>
                 <MDTypography>

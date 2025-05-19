@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Button,
   Dialog,
@@ -16,6 +16,8 @@ import {
   Box,
   Chip,
   Avatar,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -26,6 +28,9 @@ import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import { Download as DownloadIcon } from "@mui/icons-material";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -143,20 +148,64 @@ function GroupMembersManagement() {
   };
 
   const handleSearchChange = (e) => {
-    const query = e.target.value.toLowerCase();
-    setState((prev) => ({ ...prev, searchTerm: query }));
+    setState((prev) => ({ ...prev, searchTerm: e.target.value.toLowerCase() }));
   };
 
-  const filteredMembers = state.groupMembers.filter(
-    (member) =>
-      member.userId.toLowerCase().includes(state.searchTerm) ||
-      new Date(member.joinedAt).toLocaleString().toLowerCase().includes(state.searchTerm)
-  );
+  const filteredMembers = useMemo(() => {
+    if (!state.searchTerm) return state.groupMembers;
+
+    return state.groupMembers.filter((member) => {
+      const nameMatch = member.user?.name?.toLowerCase().includes(state.searchTerm);
+      const phoneMatch = member.user?.phoneNumber?.toLowerCase().includes(state.searchTerm);
+      return nameMatch || phoneMatch;
+    });
+  }, [state.groupMembers, state.searchTerm]);
+
+  const handleExportCSV = () => {
+    if (filteredMembers.length === 0) {
+      showSnackbar("No data to export", "warning");
+      return;
+    }
+
+    const headers = ["Name", "Phone Number", "Joined At"];
+    const csvData = [
+      headers.join(","),
+      ...filteredMembers.map(
+        (member) =>
+          `"${member.user?.name || ""}","${member.user?.phoneNumber || ""}","${new Date(member.joinedAt).toLocaleString()}"`
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+    saveAs(blob, `group_members_${state.selectedGroupId}.csv`);
+  };
+
+  const handleExportExcel = () => {
+    if (filteredMembers.length === 0) {
+      showSnackbar("No data to export", "warning");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(
+      filteredMembers.map((member) => ({
+        Name: member.user?.name || "",
+        "Phone Number": member.user?.phoneNumber || "",
+        "Joined At": new Date(member.joinedAt).toLocaleString(),
+      }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Group Members");
+    XLSX.writeFile(workbook, `group_members_${state.selectedGroupId}.xlsx`);
+  };
 
   const columns = [
     {
       Header: "User",
-      accessor: (row) => `${row.user?.name || "N/A"} (${row.user?.phoneNumber || "N/A"})`,
+      accessor: (row) => `${row.user?.name || "N/A"}`,
+    },
+    {
+      Header: "Phone Number",
+      accessor: (row) => `${row.user?.phoneNumber || "N/A"}`,
     },
     {
       Header: "Joined At",
@@ -228,7 +277,22 @@ function GroupMembersManagement() {
                       sx={{ width: 300 }}
                       size="small"
                       disabled={!state.selectedGroupId}
+                      placeholder="Search by name or phone"
                     />
+                    {state.selectedGroupId && (
+                      <Box>
+                        <Tooltip title="Export to CSV">
+                          <IconButton onClick={handleExportCSV} color="primary">
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Export to Excel">
+                          <IconButton onClick={handleExportExcel} color="success">
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    )}
                   </MDBox>
                 </MDBox>
               </MDBox>
@@ -250,7 +314,11 @@ function GroupMembersManagement() {
                 </FormControl>
 
                 {state.selectedGroupId ? (
-                  state.groupMembers.length > 0 ? (
+                  state.loading ? (
+                    <MDBox p={3} display="flex" justifyContent="center">
+                      <CircularProgress />
+                    </MDBox>
+                  ) : filteredMembers.length > 0 ? (
                     <DataTable
                       table={{ columns, rows: filteredMembers }}
                       isSorted={false}
@@ -260,7 +328,11 @@ function GroupMembersManagement() {
                     />
                   ) : (
                     <MDBox p={3} textAlign="center">
-                      <MDTypography variant="body1">No members found in this group</MDTypography>
+                      <MDTypography variant="body1">
+                        {state.searchTerm
+                          ? "No matching members found"
+                          : "No members found in this group"}
+                      </MDTypography>
                     </MDBox>
                   )
                 ) : (

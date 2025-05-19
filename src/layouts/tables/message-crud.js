@@ -16,7 +16,9 @@ import {
   Box,
   Chip,
   IconButton,
-  Avatar,
+  FormGroup,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import MDBox from "components/MDBox";
@@ -57,7 +59,6 @@ function Messages() {
     open: false,
     mode: "create", // 'create' or 'edit'
     currentMessage: null,
-    confirmDelete: null,
     formData: {
       timeFrame: "",
       scriptName: "",
@@ -66,11 +67,15 @@ function Messages() {
       target2: "",
       stopLoss: "",
       reason: "",
-      discriminator: "",
-      sebzRegistration: "8484998474",
+      discriminator: "https://commoditysamachar.com/disclosures-and-disclaimers/",
+      sebzRegistration: "INH000017781",
       audioId: "",
       images: Array(5).fill(null),
       imagePreviews: Array(5).fill(null),
+      share_message: false,
+      link: "",
+      document: null,
+      documentPreview: null,
     },
     formErrors: {
       scriptName: false,
@@ -101,6 +106,7 @@ function Messages() {
 
   const fetchGroups = async () => {
     try {
+      setState((prev) => ({ ...prev, loading: true }));
       const token = localStorage.getItem("token");
       const response = await fetch(`${BASE_URL}/api/groups`, {
         headers: {
@@ -108,26 +114,24 @@ function Messages() {
         },
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch groups");
-      }
-
       const data = await response.json();
       if (data.success && data.groups) {
         setState((prev) => ({
           ...prev,
           groups: data.groups,
           selectedGroupId: data.groups[0]?.id || "",
+          loading: false,
         }));
         if (data.groups.length > 0) {
           fetchMessages(data.groups[0].id);
         }
       } else {
-        throw new Error(data.message || "No groups found");
+        // throw new Error(data.message || "No groups found");
       }
     } catch (error) {
       console.error("Error fetching groups:", error);
       showSnackbar(error.message || "Error fetching groups", "error");
+      setState((prev) => ({ ...prev, loading: false }));
     }
   };
 
@@ -143,10 +147,6 @@ function Messages() {
           },
         }
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch messages");
-      }
 
       const data = await response.json();
       if (data.success) {
@@ -181,10 +181,6 @@ function Messages() {
         },
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch audio files");
-      }
-
       const data = await response.json();
       if (data.success) {
         setState((prev) => ({
@@ -213,14 +209,13 @@ function Messages() {
   };
 
   const handleSearchChange = (e) => {
-    const query = e.target.value.toLowerCase();
-    setState((prev) => ({ ...prev, searchTerm: query }));
+    setState((prev) => ({ ...prev, searchTerm: e.target.value }));
   };
 
   const validateForm = () => {
     const errors = {
-      scriptName: !dialogState.formData.scriptName,
-      actionType: !dialogState.formData.actionType,
+      scriptName: !dialogState.formData.scriptName.trim(),
+      actionType: !dialogState.formData.actionType.trim(),
     };
 
     setDialogState((prev) => ({
@@ -232,11 +227,6 @@ function Messages() {
   };
 
   const handleCreateMessage = async () => {
-    if (!validateForm()) {
-      showSnackbar("Please fill all required fields", "error");
-      return;
-    }
-
     try {
       const token = localStorage.getItem("token");
       const formDataToSend = new FormData();
@@ -253,19 +243,29 @@ function Messages() {
       formDataToSend.append("scriptName", dialogState.formData.scriptName);
       formDataToSend.append("actionType", dialogState.formData.actionType);
       formDataToSend.append("target1", dialogState.formData.target1);
-      formDataToSend.append("target2", dialogState.formData.target2);
+      formDataToSend.append("target2", dialogState.formData.target2 || "");
       formDataToSend.append("stopLoss", dialogState.formData.stopLoss);
       formDataToSend.append("reason", dialogState.formData.reason);
-      formDataToSend.append("discriminator", dialogState.formData.discriminator);
+      formDataToSend.append(
+        "discriminator",
+        dialogState.formData.discriminator ||
+          "https://commoditysamachar.com/disclosures-and-disclaimers/"
+      );
       formDataToSend.append(
         "sebzRegistration",
-        dialogState.formData.sebzRegistration || "8484998474"
+        dialogState.formData.sebzRegistration || "INH000017781"
       );
       formDataToSend.append("adminId", localStorage.getItem("id"));
       formDataToSend.append("groupId", state.selectedGroupId);
+      formDataToSend.append("share_message", dialogState.formData.share_message.toString());
+      formDataToSend.append("link", dialogState.formData.link || "");
 
       if (dialogState.formData.audioId) {
         formDataToSend.append("audioId", dialogState.formData.audioId);
+      }
+
+      if (dialogState.formData.document) {
+        formDataToSend.append("document", dialogState.formData.document);
       }
 
       const response = await fetch(`${BASE_URL}/api/groups/message`, {
@@ -277,12 +277,12 @@ function Messages() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create message");
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create message");
       }
 
       const data = await response.json();
-      if (data.success) {
+      if (data) {
         showSnackbar("Message created successfully");
         setDialogState((prev) => ({ ...prev, open: false }));
         resetForm();
@@ -295,11 +295,6 @@ function Messages() {
   };
 
   const handleUpdateMessage = async () => {
-    if (!validateForm()) {
-      showSnackbar("Please fill all required fields", "error");
-      return;
-    }
-
     try {
       const token = localStorage.getItem("token");
       const formDataToSend = new FormData();
@@ -317,8 +312,19 @@ function Messages() {
       formDataToSend.append("scriptName", dialogState.formData.scriptName);
       formDataToSend.append("actionType", dialogState.formData.actionType);
       formDataToSend.append("target1", dialogState.formData.target1);
+      formDataToSend.append("target2", dialogState.formData.target2 || "");
       formDataToSend.append("stopLoss", dialogState.formData.stopLoss);
       formDataToSend.append("reason", dialogState.formData.reason);
+      formDataToSend.append("share_message", dialogState.formData.share_message.toString());
+      formDataToSend.append("link", dialogState.formData.link || "");
+
+      if (dialogState.formData.audioId) {
+        formDataToSend.append("audioId", dialogState.formData.audioId);
+      }
+
+      if (dialogState.formData.document) {
+        formDataToSend.append("document", dialogState.formData.document);
+      }
 
       const response = await fetch(`${BASE_URL}/api/messages/${dialogState.currentMessage.id}`, {
         method: "PUT",
@@ -380,19 +386,38 @@ function Messages() {
   const handleInputChange = (e) => {
     const { name, value, type, files } = e.target;
     if (type === "file") {
-      const index = parseInt(name.split("-")[1]);
-      const newImages = [...dialogState.formData.images];
-      const newImagePreviews = [...dialogState.formData.imagePreviews];
+      if (name === "document") {
+        setDialogState((prev) => ({
+          ...prev,
+          formData: {
+            ...prev.formData,
+            document: files[0],
+            documentPreview: files[0] ? URL.createObjectURL(files[0]) : null,
+          },
+        }));
+      } else {
+        const index = parseInt(name.split("-")[1]);
+        const newImages = [...dialogState.formData.images];
+        const newImagePreviews = [...dialogState.formData.imagePreviews];
 
-      newImages[index] = files[0];
-      newImagePreviews[index] = files[0] ? URL.createObjectURL(files[0]) : null;
+        newImages[index] = files[0];
+        newImagePreviews[index] = files[0] ? URL.createObjectURL(files[0]) : null;
 
+        setDialogState((prev) => ({
+          ...prev,
+          formData: {
+            ...prev.formData,
+            images: newImages,
+            imagePreviews: newImagePreviews,
+          },
+        }));
+      }
+    } else if (name === "share_message") {
       setDialogState((prev) => ({
         ...prev,
         formData: {
           ...prev.formData,
-          images: newImages,
-          imagePreviews: newImagePreviews,
+          [name]: e.target.checked,
         },
       }));
     } else {
@@ -424,8 +449,9 @@ function Messages() {
           target2: message.target2 || "",
           stopLoss: message.stopLoss,
           reason: message.reason,
-          discriminator: message.discriminator,
-          sebzRegistration: message.sebzRegistration || "8484998474",
+          discriminator:
+            message.discriminator || "https://commoditysamachar.com/disclosures-and-disclaimers/",
+          sebzRegistration: message.sebzRegistration || "INH000017781",
           audioId: message.audioId || "",
           images: Array(5).fill(null),
           imagePreviews: [
@@ -435,6 +461,10 @@ function Messages() {
             message.image4 || null,
             message.image5 || null,
           ],
+          share_message: message.share_message || false,
+          link: message.link || "",
+          document: null,
+          documentPreview: message.document || null,
         },
         formErrors: {
           scriptName: false,
@@ -458,11 +488,15 @@ function Messages() {
           target2: "",
           stopLoss: "",
           reason: "",
-          discriminator: "",
-          sebzRegistration: "8484998474",
+          discriminator: "https://commoditysamachar.com/disclosures-and-disclaimers/",
+          sebzRegistration: "INH000017781",
           audioId: "",
           images: Array(5).fill(null),
           imagePreviews: Array(5).fill(null),
+          share_message: false,
+          link: "",
+          document: null,
+          documentPreview: null,
         },
         formErrors: {
           scriptName: false,
@@ -483,11 +517,15 @@ function Messages() {
         target2: "",
         stopLoss: "",
         reason: "",
-        discriminator: "",
-        sebzRegistration: "8484998474",
+        discriminator: "https://commoditysamachar.com/disclosures-and-disclaimers/",
+        sebzRegistration: "INH000017781",
         audioId: "",
         images: Array(5).fill(null),
         imagePreviews: Array(5).fill(null),
+        share_message: false,
+        link: "",
+        document: null,
+        documentPreview: null,
       },
     }));
   };
@@ -572,7 +610,7 @@ function Messages() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Group Messages Management
+                    Group Messages
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
                     <TextField
@@ -667,24 +705,24 @@ function Messages() {
                 margin="normal"
               />
               <TextField
-                label="Script Name *"
+                label="Script Name"
                 name="scriptName"
                 value={dialogState.formData.scriptName}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
                 error={dialogState.formErrors.scriptName}
-                helperText={dialogState.formErrors.scriptName ? "Script name is required" : ""}
+                helperText={dialogState.formErrors.scriptName ? "Script Name is required" : ""}
               />
               <TextField
-                label="Action Type *"
+                label="Action Type"
                 name="actionType"
                 value={dialogState.formData.actionType}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
                 error={dialogState.formErrors.actionType}
-                helperText={dialogState.formErrors.actionType ? "Action type is required" : ""}
+                helperText={dialogState.formErrors.actionType ? "Action Type is required" : ""}
               />
               <TextField
                 label="Target 1"
@@ -703,6 +741,15 @@ function Messages() {
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
+              />
+              <TextField
+                label="Link"
+                name="link"
+                value={dialogState.formData.link}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                placeholder="https://example.com"
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -724,18 +771,19 @@ function Messages() {
                 margin="normal"
               />
               <TextField
-                label="Discriminator"
+                label="Disclaimer"
                 name="discriminator"
+                disabled
                 value={dialogState.formData.discriminator}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
               />
               <TextField
-                label="SEBZ Registration"
+                label="SEBI Registration Number"
                 name="sebzRegistration"
                 disabled
-                value={dialogState.formData.sebzRegistration || "8484998474"}
+                value={dialogState.formData.sebzRegistration}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
@@ -762,6 +810,71 @@ function Messages() {
                   ))}
                 </Select>
               </FormControl>
+
+              {/* Document upload */}
+              <Box sx={{ mt: 2 }}>
+                <input
+                  accept=".pdf,.doc,.docx"
+                  type="file"
+                  name="document"
+                  onChange={handleInputChange}
+                  style={{ display: "none" }}
+                  id="messageDocument"
+                />
+                <label htmlFor="messageDocument">
+                  <Button
+                    component="span"
+                    color="error"
+                    variant="contained"
+                    startIcon={<CloudUploadIcon />}
+                  >
+                    Upload Document
+                  </Button>
+                </label>
+                {dialogState.formData.document && (
+                  <Chip
+                    label={dialogState.formData.document.name}
+                    onDelete={() => {
+                      setDialogState((prev) => ({
+                        ...prev,
+                        formData: {
+                          ...prev.formData,
+                          document: null,
+                          documentPreview: null,
+                        },
+                      }));
+                    }}
+                    sx={{ mt: 1, ml: 1 }}
+                  />
+                )}
+                {dialogState.formData.documentPreview &&
+                  typeof dialogState.formData.documentPreview === "string" && (
+                    <Box mt={1}>
+                      <a
+                        href={dialogState.formData.documentPreview}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#1976d2", textDecoration: "none" }}
+                      >
+                        View Document
+                      </a>
+                    </Box>
+                  )}
+              </Box>
+
+              {/* Share Message Toggle */}
+              <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={dialogState.formData.share_message}
+                      onChange={handleInputChange}
+                      name="share_message"
+                    />
+                  }
+                  label="Share Message"
+                />
+              </FormGroup>
 
               {/* Multiple image upload fields */}
               {[0, 1, 2, 3, 4].map((index) => (
@@ -831,9 +944,8 @@ function Messages() {
             onClick={dialogState.mode === "create" ? handleCreateMessage : handleUpdateMessage}
             color="error"
             variant="contained"
-            disabled={!dialogState.formData.scriptName || !dialogState.formData.actionType}
           >
-            {dialogState.mode === "create" ? "send" : "Update"}
+            {dialogState.mode === "create" ? "Send" : "Update"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -894,6 +1006,9 @@ Messages.propTypes = {
       image3: PropTypes.string,
       image4: PropTypes.string,
       image5: PropTypes.string,
+      share_message: PropTypes.bool,
+      link: PropTypes.string,
+      document: PropTypes.string,
     }),
   }),
 };

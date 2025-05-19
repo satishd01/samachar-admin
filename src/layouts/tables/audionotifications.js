@@ -212,14 +212,14 @@ function AudioNotifications() {
       Header: "Audio",
       Cell: ({ row }) => <AudioPlayer src={row.original.url} />,
     },
-    {
-      Header: "Actions",
-      Cell: ({ row }) => (
-        <Button variant="contained" color="error" onClick={() => handleNotify(row.original)}>
-          Notify Users
-        </Button>
-      ),
-    },
+    // {
+    //   Header: "Actions",
+    //   Cell: ({ row }) => (
+    //     <Button variant="contained" color="error" onClick={() => handleNotify(row.original)}>
+    //       Notify Users
+    //     </Button>
+    //   ),
+    // },
   ];
 
   const filteredAudios = audios.filter((audio) => {

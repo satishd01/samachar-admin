@@ -190,7 +190,7 @@ function Users() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create user");
+        throw new Error(errorData.message || "Failed to create user");
       }
 
       const data = await response.json();
@@ -355,7 +355,7 @@ function Users() {
     { Header: "Email", accessor: "email" },
     { Header: "Phone Number", accessor: "phoneNumber" },
     { Header: "KYC Status", accessor: "KYCStatus" },
-    { Header: "Verified", accessor: "isVerified", Cell: ({ value }) => (value ? "Yes" : "No") },
+    // { Header: "Verified", accessor: "isVerified", Cell: ({ value }) => (value ? "Yes" : "No") },
     {
       Header: "Actions",
       Cell: ({ row }) => (
@@ -509,7 +509,7 @@ function Users() {
             sx={{ mb: 2 }}
             required
           />
-          <TextField
+          {/* <TextField
             margin="dense"
             name="about"
             label="About"
@@ -518,7 +518,7 @@ function Users() {
             value={formData.about}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
-          />
+          /> */}
           <TextField
             margin="dense"
             name="password"
@@ -538,13 +538,13 @@ function Users() {
             fullWidth
             value={formData.KYCStatus}
             onChange={handleInputChange}
-            sx={{ mb: 2 }}
+            sx={{ mb: 2, mt: 2 }}
           >
             <MenuItem value="pending">Pending</MenuItem>
             <MenuItem value="verified">Verified</MenuItem>
             <MenuItem value="rejected">Rejected</MenuItem>
           </TextField>
-          <TextField
+          {/* <TextField
             margin="dense"
             name="isVerified"
             label="Verified"
@@ -556,8 +556,8 @@ function Users() {
           >
             <MenuItem value={false}>No</MenuItem>
             <MenuItem value={true}>Yes</MenuItem>
-          </TextField>
-          <TextField
+          </TextField> */}
+          {/* <TextField
             margin="dense"
             name="fcmToken"
             label="FCM Token"
@@ -566,7 +566,7 @@ function Users() {
             value={formData.fcmToken}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
-          />
+          /> */}
           <input
             accept="image/*"
             style={{ display: "none" }}
@@ -670,7 +670,7 @@ function Users() {
             <MenuItem value="verified">Verified</MenuItem>
             <MenuItem value="rejected">Rejected</MenuItem>
           </TextField>
-          <TextField
+          {/* <TextField
             margin="dense"
             name="isVerified"
             label="Verified"
@@ -682,8 +682,8 @@ function Users() {
           >
             <MenuItem value={false}>No</MenuItem>
             <MenuItem value={true}>Yes</MenuItem>
-          </TextField>
-          <TextField
+          </TextField> */}
+          {/* <TextField
             margin="dense"
             name="fcmToken"
             label="FCM Token"
@@ -692,7 +692,7 @@ function Users() {
             value={formData.fcmToken}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
-          />
+          /> */}
           <input
             accept="image/*"
             style={{ display: "none" }}
