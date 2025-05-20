@@ -25,6 +25,15 @@ import YouTubeLiveStreams from "layouts/tables/live-stream";
 import { Feedback } from "@mui/icons-material";
 import FeedbackList from "layouts/tables/feedback";
 import FeedbackIcon from "@mui/icons-material/Feedback";
+import TermsAndConditions from "layouts/tables/termandcondition";
+import AboutUs from "layouts/tables/about-us";
+import GavelIcon from "@mui/icons-material/Gavel";
+import InfoIcon from "@mui/icons-material/Info";
+import HelpTopic from "layouts/tables/help-us";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import ReportsManagement from "layouts/tables/reports";
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import FAQsManagement from "layouts/tables/faq";
 
 // Define routes
 const routes = [
@@ -70,27 +79,11 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "News",
-    key: "news",
-    icon: <ArticleIcon fontSize="small" />,
-    route: "/news",
-    component: <NewsAPIComponent />,
-  },
-  {
-    type: "collapse",
-    name: "Audio Notifications",
-    key: "audio-notifications",
-    icon: <NotificationsActiveIcon fontSize="small" />,
-    route: "/audio-notifications",
-    component: <AudioNotifications />,
-  },
-  {
-    type: "collapse",
-    name: "Call verification",
-    key: "Call-verification",
-    icon: <PhoneInTalkIcon fontSize="small" />,
-    route: "/call-verification",
-    component: <CallVerifications />,
+    name: "Members",
+    key: "members",
+    icon: <Icon fontSize="small">groups</Icon>,
+    route: "/members",
+    component: <GroupMembersManagement />,
   },
   {
     type: "collapse",
@@ -107,14 +100,6 @@ const routes = [
     icon: <Icon fontSize="small">message</Icon>,
     route: "/messages",
     component: <Messages />,
-  },
-  {
-    type: "collapse",
-    name: "Members",
-    key: "members",
-    icon: <Icon fontSize="small">groups</Icon>,
-    route: "/members",
-    component: <GroupMembersManagement />,
   },
   {
     type: "collapse",
@@ -158,11 +143,75 @@ const routes = [
   },
   {
     type: "collapse",
+    name: "News",
+    key: "news",
+    icon: <ArticleIcon fontSize="small" />,
+    route: "/news",
+    component: <NewsAPIComponent />,
+  },
+  {
+    type: "collapse",
+    name: "Audio Notifications",
+    key: "audio-notifications",
+    icon: <NotificationsActiveIcon fontSize="small" />,
+    route: "/audio-notifications",
+    component: <AudioNotifications />,
+  },
+  {
+    type: "collapse",
+    name: "Call verification",
+    key: "Call-verification",
+    icon: <PhoneInTalkIcon fontSize="small" />,
+    route: "/call-verification",
+    component: <CallVerifications />,
+  },
+  {
+    type: "collapse",
     name: "Feedback",
     key: "Feedback",
     icon: <FeedbackIcon fontSize="small" />,
     route: "/feedback",
     component: <FeedbackList />,
+  },
+  {
+    type: "collapse",
+    name: "Term & Condition",
+    key: "term-condition",
+    icon: <GavelIcon fontSize="small" />, // Better suited for legal or T&C
+    route: "/tnc",
+    component: <TermsAndConditions />,
+  },
+  {
+    type: "collapse",
+    name: "About Us",
+    key: "about-us",
+    icon: <InfoIcon fontSize="small" />, // Ideal for information/about sections
+    route: "/about-us",
+    component: <AboutUs />,
+  },
+  {
+    type: "collapse",
+    name: "Help Topics",
+    key: "help-topics",
+    icon: <HelpOutlineIcon fontSize="small" />, // Best for help/FAQ sections
+    route: "/help-topic",
+    component: <HelpTopic />,
+  },
+  {
+    type: "collapse",
+    name: "Faq",
+    key: "Faq",
+    icon: <HelpOutlineIcon fontSize="small" />,
+    route: "/faq",
+    component: <FAQsManagement />,
+  },
+  {
+    type: "collapse",
+    name: "Report",
+    key: "Report",
+    icon: <AssessmentIcon fontSize="small" />,
+    route: "/report",
+    component: <ReportsManagement />,
   },
   {
     route: "/authentication/sign-in",

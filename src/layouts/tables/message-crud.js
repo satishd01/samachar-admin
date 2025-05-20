@@ -336,7 +336,7 @@ function Messages() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update message");
+        throw new Error(errorData.error || "Failed to update message");
       }
 
       const data = await response.json();
@@ -847,7 +847,7 @@ function Messages() {
                     sx={{ mt: 1, ml: 1 }}
                   />
                 )}
-                {dialogState.formData.documentPreview &&
+                {/* {dialogState.formData.documentPreview &&
                   typeof dialogState.formData.documentPreview === "string" && (
                     <Box mt={1}>
                       <a
@@ -859,7 +859,7 @@ function Messages() {
                         View Document
                       </a>
                     </Box>
-                  )}
+                  )} */}
               </Box>
 
               {/* Share Message Toggle */}

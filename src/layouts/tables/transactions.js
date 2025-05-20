@@ -36,12 +36,45 @@ import ReceiptIcon from "@mui/icons-material/Receipt";
 import Typography from "@mui/material/Typography";
 import logo from "assets/images/logos/logo.jpeg";
 import ClearIcon from "@mui/icons-material/Clear";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
+import CancelIcon from "@mui/icons-material/Cancel";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
-const PaidCell = ({ value }) => (
-  <Chip label={value ? "Paid" : "Free"} color={value ? "error" : "success"} size="small" />
-);
+const PaidCell = ({ value }) => {
+  switch (value) {
+    case "captured":
+      return (
+        <Chip
+          icon={<CheckCircleIcon style={{ color: "white" }} />}
+          label="captured"
+          color="success"
+          size="small"
+        />
+      );
+    case "created":
+      return (
+        <Chip
+          icon={<HourglassEmptyIcon style={{ color: "white" }} />}
+          label="created"
+          color="warning"
+          size="small"
+        />
+      );
+    case "failed":
+      return (
+        <Chip
+          icon={<CancelIcon style={{ color: "white" }} />}
+          label="Failed"
+          color="error"
+          size="small"
+        />
+      );
+    default:
+      return <Chip label={value} variant="outlined" size="small" />;
+  }
+};
 PaidCell.propTypes = {
   value: PropTypes.bool.isRequired,
 };
@@ -588,6 +621,7 @@ function TransactionManagement() {
     { Header: "Phone", accessor: (row) => `${row.userPhone}` },
     { Header: "Amount", accessor: (row) => `${row.amount} ${row.currency}` },
     { Header: "Type", accessor: (row) => row.metadata.notes.type },
+    // { Header: "Payment Status", accessor: "paymentStatus" },
     { Header: "Status", accessor: "paymentStatus", Cell: PaidCell },
     { Header: "Date", accessor: (row) => new Date(row.paymentDate).toLocaleString() },
     {

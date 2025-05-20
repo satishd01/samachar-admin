@@ -355,6 +355,10 @@ function Users() {
     { Header: "Email", accessor: "email" },
     { Header: "Phone Number", accessor: "phoneNumber" },
     { Header: "KYC Status", accessor: "KYCStatus" },
+    {
+      Header: "GST No",
+      accessor: (row) => row.gstDetails?.gstInNo || "N/A",
+    },
     // { Header: "Verified", accessor: "isVerified", Cell: ({ value }) => (value ? "Yes" : "No") },
     {
       Header: "Actions",

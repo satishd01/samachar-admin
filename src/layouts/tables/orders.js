@@ -317,7 +317,7 @@ function SubscriptionOrders() {
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
                     <TextField
-                      label="Search Subscriptions"
+                      label="Search by subscription ID"
                       value={state.searchTerm}
                       onChange={handleSearchChange}
                       sx={{ width: 300 }}

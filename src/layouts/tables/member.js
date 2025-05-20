@@ -212,19 +212,19 @@ function GroupMembersManagement() {
       accessor: "joinedAt",
       Cell: ({ value }) => new Date(value).toLocaleString(),
     },
-    {
-      Header: "Actions",
-      accessor: "actions",
-      Cell: ({ row }) => (
-        <Button
-          variant="contained"
-          color="error"
-          onClick={() => console.log("Remove member:", row.original.id)}
-        >
-          Remove
-        </Button>
-      ),
-    },
+    // {
+    //   Header: "Actions",
+    //   accessor: "actions",
+    //   Cell: ({ row }) => (
+    //     <Button
+    //       variant="contained"
+    //       color="error"
+    //       onClick={() => console.log("Remove member:", row.original.id)}
+    //     >
+    //       Remove
+    //     </Button>
+    //   ),
+    // },
   ];
 
   useEffect(() => {
