@@ -34,6 +34,7 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import ReportsManagement from "layouts/tables/reports";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import FAQsManagement from "layouts/tables/faq";
+import Invoices from "layouts/tables/invoice";
 
 // Define routes
 const routes = [
@@ -116,6 +117,14 @@ const routes = [
     icon: <ReceiptLongIcon fontSize="small" />,
     route: "/transactions",
     component: <TransactionManagement />,
+  },
+  {
+    type: "collapse",
+    name: "Invoice",
+    key: "Invoice",
+    icon: <ReceiptLongIcon fontSize="small" />,
+    route: "/invoice",
+    component: <Invoices />,
   },
   {
     type: "collapse",

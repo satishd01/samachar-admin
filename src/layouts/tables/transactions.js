@@ -155,6 +155,8 @@ function TransactionManagement() {
       }
 
       const data = await response.json();
+
+      const filtered = data.data.filter((tx) => tx?.metadata?.notes?.type !== "wallet_topup");
       setState((prev) => ({
         ...prev,
         transactions: data.data,
@@ -615,12 +617,12 @@ function TransactionManagement() {
   };
 
   const columns = [
+    { Header: "Type", accessor: (row) => row.metadata.notes.type },
     { Header: "Transaction ID", accessor: "paymentId" },
     { Header: "Group Name", accessor: "groupName" },
     { Header: "User", accessor: (row) => `${row.userName}` },
     { Header: "Phone", accessor: (row) => `${row.userPhone}` },
     { Header: "Amount", accessor: (row) => `${row.amount} ${row.currency}` },
-    { Header: "Type", accessor: (row) => row.metadata.notes.type },
     // { Header: "Payment Status", accessor: "paymentStatus" },
     { Header: "Status", accessor: "paymentStatus", Cell: PaidCell },
     { Header: "Date", accessor: (row) => new Date(row.paymentDate).toLocaleString() },

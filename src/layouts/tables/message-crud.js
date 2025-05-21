@@ -297,6 +297,7 @@ function Messages() {
   const handleUpdateMessage = async () => {
     try {
       const token = localStorage.getItem("token");
+      const adminId = localStorage.getItem("id");
       const formDataToSend = new FormData();
 
       // Append images
@@ -307,7 +308,7 @@ function Messages() {
       });
 
       // Append other fields
-      formDataToSend.append("adminId", localStorage.getItem("id"));
+      formDataToSend.append("adminId", adminId);
       formDataToSend.append("timeFrame", dialogState.formData.timeFrame);
       formDataToSend.append("scriptName", dialogState.formData.scriptName);
       formDataToSend.append("actionType", dialogState.formData.actionType);
