@@ -137,9 +137,12 @@ function QuizManagement() {
   const handleCreateQuiz = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        showSnackbar("No token found, please login again", "error");
-        navigate("/authentication/sign-in");
+      // Check if start time and end time are the same
+      const startTime = new Date(dialogState.createQuiz.formData.startTime);
+      const endTime = new Date(dialogState.createQuiz.formData.endTime);
+
+      if (startTime.toISOString() === endTime.toISOString()) {
+        showSnackbar("Start time and end time cannot be the same", "error");
         return;
       }
 
@@ -179,6 +182,52 @@ function QuizManagement() {
       showSnackbar(error.message || "Error creating quiz", "error");
     }
   };
+
+  // const handleCreateQuiz = async () => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     if (!token) {
+  //       showSnackbar("No token found, please login again", "error");
+  //       navigate("/authentication/sign-in");
+  //       return;
+  //     }
+
+  //     const response = await fetch(`${BASE_URL}/api/quizzes`, {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //       body: JSON.stringify(dialogState.createQuiz.formData),
+  //     });
+
+  //     if (!response.ok) {
+  //       const errorData = await response.json();
+  //       throw new Error(errorData.message || "Failed to create quiz");
+  //     }
+
+  //     const data = await response.json();
+  //     if (data.success) {
+  //       await fetchQuizzes();
+  //       setDialogState((prev) => ({
+  //         ...prev,
+  //         createQuiz: {
+  //           open: false,
+  //           formData: {
+  //             title: "",
+  //             description: "",
+  //             startTime: "",
+  //             endTime: "",
+  //           },
+  //         },
+  //       }));
+  //       showSnackbar("Quiz created successfully");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error creating quiz:", error);
+  //     showSnackbar(error.message || "Error creating quiz", "error");
+  //   }
+  // };
 
   const handleAddQuestion = async () => {
     try {

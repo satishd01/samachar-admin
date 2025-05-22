@@ -20,7 +20,14 @@ import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import * as XLSX from "xlsx";
 import GetAppIcon from "@mui/icons-material/GetApp";
-import { MenuItem, TablePagination } from "@mui/material";
+import {
+  MenuItem,
+  TablePagination,
+  ToggleButton,
+  ToggleButtonGroup,
+  IconButton,
+  Tooltip,
+} from "@mui/material";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 25, 50, 100];
@@ -62,6 +69,7 @@ function Users() {
     startDate: new Date().toISOString().split("T")[0],
     endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split("T")[0],
   });
+  const [userStatusFilter, setUserStatusFilter] = useState("all");
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -70,13 +78,19 @@ function Users() {
   const filteredUsers = useMemo(() => {
     const searchTermLower = searchTerm.toLowerCase();
     return users.filter((user) => {
-      return (
+      const matchesSearch =
         (user.name && user.name.toLowerCase().includes(searchTermLower)) ||
         (user.email && user.email.toLowerCase().includes(searchTermLower)) ||
-        (user.phoneNumber && user.phoneNumber.toLowerCase().includes(searchTermLower))
-      );
+        (user.phoneNumber && user.phoneNumber.toLowerCase().includes(searchTermLower));
+
+      const matchesStatus =
+        userStatusFilter === "all" ||
+        (userStatusFilter === "active" && user.isVerified) ||
+        (userStatusFilter === "inactive" && !user.isVerified);
+
+      return matchesSearch && matchesStatus;
     });
-  }, [users, searchTerm]);
+  }, [users, searchTerm, userStatusFilter]);
 
   const paginatedUsers = useMemo(() => {
     return filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
@@ -194,12 +208,13 @@ function Users() {
       }
 
       const data = await response.json();
-      setUsers([...users, data]);
+      setUsers((prevUsers) => [...prevUsers, data]);
       setOpenCreateDialog(false);
       setFormData(initialFormData);
       setProfileImage(null);
       showSnackbar("User created successfully");
-      setPage(0); // Reset to first page after creating new user
+      fetchUsers();
+      setPage(0);
     } catch (error) {
       console.error("Error creating user:", error);
       showSnackbar(error.message || "Error creating user", "error");
@@ -236,7 +251,7 @@ function Users() {
       }
 
       const data = await response.json();
-      setUsers(users.map((user) => (user.id === currentUser.id ? data : user)));
+      setUsers((prevUsers) => prevUsers.map((user) => (user.id === currentUser.id ? data : user)));
       setOpenEditDialog(false);
       setCurrentUser(null);
       setProfileImage(null);
@@ -325,29 +340,42 @@ function Users() {
       const data = await response.json();
       showSnackbar("Subscription created successfully");
       setOpenSubscriptionDialog(false);
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === subscriptionData.userId ? { ...user, hasSubscription: true } : user
+        )
+      );
     } catch (error) {
       console.error("Error creating subscription:", error);
       showSnackbar(error.message || "Error creating subscription", "error");
     }
   };
 
-  const exportToExcel = () => {
-    const excelData = filteredUsers.map((user) => ({
+  const exportToExcel = (type) => {
+    let exportUsers = users;
+
+    if (type === "active") {
+      exportUsers = users.filter((user) => user.isVerified);
+    } else if (type === "inactive") {
+      exportUsers = users.filter((user) => !user.isVerified);
+    }
+
+    const excelData = exportUsers.map((user) => ({
       Name: user.name,
       Email: user.email,
       "Phone Number": user.phoneNumber,
       About: user.about || "",
       "KYC Status": user.KYCStatus || "pending",
-      Verified: user.isVerified ? "Yes" : "No",
+      Status: user.isVerified ? "Active" : "Inactive",
       "Last Seen": user.lastSeen || "",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
-    XLSX.writeFile(workbook, "users_export.xlsx");
+    XLSX.writeFile(workbook, `users_${type}_export.xlsx`);
 
-    showSnackbar("Users data exported successfully");
+    showSnackbar(`Users data (${type}) exported successfully`);
   };
 
   const columns = [
@@ -359,7 +387,19 @@ function Users() {
       Header: "GST No",
       accessor: (row) => row.gstDetails?.gstInNo || "N/A",
     },
-    // { Header: "Verified", accessor: "isVerified", Cell: ({ value }) => (value ? "Yes" : "No") },
+    {
+      Header: "Status",
+      accessor: (row) => (row.isVerified ? "Active" : "Inactive"),
+      Cell: ({ value }) => (
+        <MDTypography
+          variant="caption"
+          color={value === "Active" ? "success" : "error"}
+          fontWeight="medium"
+        >
+          {value}
+        </MDTypography>
+      ),
+    },
     {
       Header: "Actions",
       Cell: ({ row }) => (
@@ -428,22 +468,46 @@ function Users() {
                         },
                       }}
                     />
+                    <ToggleButtonGroup
+                      value={userStatusFilter}
+                      exclusive
+                      onChange={(e, newFilter) => {
+                        if (newFilter !== null) {
+                          setUserStatusFilter(newFilter);
+                          setPage(0);
+                        }
+                      }}
+                      sx={{ mr: 1 }}
+                    >
+                      <ToggleButton value="all">All</ToggleButton>
+                      <ToggleButton value="active">Active</ToggleButton>
+                      <ToggleButton value="inactive">Inactive</ToggleButton>
+                    </ToggleButtonGroup>
                     <Button
                       variant="contained"
                       color="error"
                       onClick={() => setOpenCreateDialog(true)}
-                      sx={{ mr: 2 }}
+                      sx={{ mr: 1 }}
                     >
                       Create User
                     </Button>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      startIcon={<GetAppIcon />}
-                      onClick={exportToExcel}
-                    >
-                      Export
-                    </Button>
+                    <MDBox display="flex" gap={1}>
+                      <Tooltip title="Export All Users">
+                        <IconButton onClick={() => exportToExcel("all")} color="success">
+                          <GetAppIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Export Active Users">
+                        <IconButton onClick={() => exportToExcel("active")} color="success">
+                          <GetAppIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Export Inactive Users">
+                        <IconButton onClick={() => exportToExcel("inactive")} color="success">
+                          <GetAppIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </MDBox>
                   </MDBox>
                 </MDBox>
               </MDBox>
@@ -513,16 +577,6 @@ function Users() {
             sx={{ mb: 2 }}
             required
           />
-          {/* <TextField
-            margin="dense"
-            name="about"
-            label="About"
-            type="text"
-            fullWidth
-            value={formData.about}
-            onChange={handleInputChange}
-            sx={{ mb: 2 }}
-          /> */}
           <TextField
             margin="dense"
             name="password"
@@ -548,29 +602,19 @@ function Users() {
             <MenuItem value="verified">Verified</MenuItem>
             <MenuItem value="rejected">Rejected</MenuItem>
           </TextField>
-          {/* <TextField
+          <TextField
             margin="dense"
             name="isVerified"
-            label="Verified"
+            label="User Status"
             select
             fullWidth
             value={formData.isVerified}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
           >
-            <MenuItem value={false}>No</MenuItem>
-            <MenuItem value={true}>Yes</MenuItem>
-          </TextField> */}
-          {/* <TextField
-            margin="dense"
-            name="fcmToken"
-            label="FCM Token"
-            type="text"
-            fullWidth
-            value={formData.fcmToken}
-            onChange={handleInputChange}
-            sx={{ mb: 2 }}
-          /> */}
+            <MenuItem value={false}>Inactive</MenuItem>
+            <MenuItem value={true}>Active</MenuItem>
+          </TextField>
           <input
             accept="image/*"
             style={{ display: "none" }}
@@ -674,29 +718,19 @@ function Users() {
             <MenuItem value="verified">Verified</MenuItem>
             <MenuItem value="rejected">Rejected</MenuItem>
           </TextField>
-          {/* <TextField
+          <TextField
             margin="dense"
             name="isVerified"
-            label="Verified"
+            label="User Status"
             select
             fullWidth
             value={formData.isVerified}
             onChange={handleInputChange}
             sx={{ mb: 2 }}
           >
-            <MenuItem value={false}>No</MenuItem>
-            <MenuItem value={true}>Yes</MenuItem>
-          </TextField> */}
-          {/* <TextField
-            margin="dense"
-            name="fcmToken"
-            label="FCM Token"
-            type="text"
-            fullWidth
-            value={formData.fcmToken}
-            onChange={handleInputChange}
-            sx={{ mb: 2 }}
-          /> */}
+            <MenuItem value={false}>Inactive</MenuItem>
+            <MenuItem value={true}>Active</MenuItem>
+          </TextField>
           <input
             accept="image/*"
             style={{ display: "none" }}
@@ -832,8 +866,12 @@ Users.propTypes = {
       isVerified: PropTypes.bool,
       lastSeen: PropTypes.string,
       fcmToken: PropTypes.string,
+      gstDetails: PropTypes.shape({
+        gstInNo: PropTypes.string,
+      }),
     }).isRequired,
   }).isRequired,
+  value: PropTypes.string, // Added prop type validation for 'value'
 };
 
 export default Users;

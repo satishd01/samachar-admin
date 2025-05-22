@@ -22,7 +22,6 @@ import {
   ToggleButton,
 } from "@mui/material";
 import PropTypes from "prop-types";
-import DownloadIcon from "@mui/icons-material/Download";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -31,7 +30,12 @@ import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import { Download as DownloadIcon } from "@mui/icons-material";
 import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import DatePicker from "@mui/lab/DatePicker";
+import AdapterDateFns from "@mui/lab/AdapterDateFns";
+import LocalizationProvider from "@mui/lab/LocalizationProvider";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
 
@@ -119,10 +123,14 @@ function SubscriptionManagement() {
       }
 
       const data = await response.json();
-      setState((prev) => ({
-        ...prev,
-        users: Array.isArray(data) ? data : [],
-      }));
+      if (Array.isArray(data)) {
+        setState((prev) => ({
+          ...prev,
+          users: data,
+        }));
+      } else {
+        throw new Error(data.message || "No users found");
+      }
     } catch (error) {
       console.error("Error fetching users:", error);
       showSnackbar(error.message || "Error fetching users", "error");
@@ -143,17 +151,21 @@ function SubscriptionManagement() {
       }
 
       const data = await response.json();
-      setState((prev) => ({
-        ...prev,
-        groups: data.success ? data.groups : [],
-      }));
+      if (data.success && data.groups) {
+        setState((prev) => ({
+          ...prev,
+          groups: data.groups,
+        }));
+      } else {
+        throw new Error(data.message || "No groups found");
+      }
     } catch (error) {
       console.error("Error fetching groups:", error);
       showSnackbar(error.message || "Error fetching groups", "error");
     }
   };
 
-  const fetchSubscriptions = async (userId = "") => {
+  const fetchSubscriptions = async (userId) => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
       const token = localStorage.getItem("token");
@@ -162,11 +174,7 @@ function SubscriptionManagement() {
         return;
       }
 
-      const url = userId
-        ? `${BASE_URL}/api/subscriptions/${userId}`
-        : `${BASE_URL}/api/subscriptions`;
-
-      const response = await fetch(url, {
+      const response = await fetch(`${BASE_URL}/api/subscriptions/${userId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -177,19 +185,15 @@ function SubscriptionManagement() {
       }
 
       const data = await response.json();
-
-      // Normalize the data structure
-      const subscriptions = Array.isArray(data) ? data : data.subscriptions || [];
-
-      setState((prev) => ({
-        ...prev,
-        subscriptions: subscriptions.map((sub) => ({
-          ...sub,
-          // Ensure userId is available even if user object exists
-          userId: sub.userId || sub.user?.id,
-        })),
-        loading: false,
-      }));
+      if (data.subscriptions) {
+        setState((prev) => ({
+          ...prev,
+          subscriptions: data.subscriptions,
+          loading: false,
+        }));
+      } else {
+        throw new Error(data.message || "No subscriptions found");
+      }
     } catch (error) {
       console.error("Error fetching subscriptions:", error);
       showSnackbar(error.message || "Error fetching subscriptions", "error");
@@ -200,7 +204,9 @@ function SubscriptionManagement() {
   const handleUserChange = (event, newValue) => {
     const userId = newValue?.id || "";
     setState((prev) => ({ ...prev, selectedUserId: userId }));
-    fetchSubscriptions(userId);
+    if (userId) {
+      fetchSubscriptions(userId);
+    }
   };
 
   const handleSearchChange = (e) => {
@@ -226,6 +232,7 @@ function SubscriptionManagement() {
   const filteredSubscriptions = useMemo(() => {
     let result = state.subscriptions;
 
+    // Apply search filter
     if (state.searchTerm) {
       result = result.filter((sub) => {
         const groupName = state.groups.find((g) => g.id === sub.groupId)?.name?.toLowerCase() || "";
@@ -238,12 +245,14 @@ function SubscriptionManagement() {
       });
     }
 
+    // Apply status filter
     if (state.statusFilter !== "all") {
       result = result.filter((sub) =>
         state.statusFilter === "active" ? sub.isActive : !sub.isActive
       );
     }
 
+    // Apply date range filter
     if (state.dateRange.start) {
       result = result.filter((sub) => new Date(sub.startDate) >= new Date(state.dateRange.start));
     }
@@ -277,10 +286,8 @@ function SubscriptionManagement() {
 
     const worksheet = XLSX.utils.json_to_sheet(
       dataToExport.map((sub) => {
-        // Handle both formats for user data
-        const user = sub.user || state.users.find((u) => u.id === sub.userId);
         const group = state.groups.find((g) => g.id === sub.groupId);
-
+        const user = state.users.find((u) => u.id === sub.userId);
         return {
           "User Name": user?.name || "N/A",
           "User Phone": user?.phoneNumber || "N/A",
@@ -346,21 +353,24 @@ function SubscriptionManagement() {
         throw new Error(errorData.message || "Failed to create subscription");
       }
 
-      showSnackbar("Subscription created successfully");
-      setDialogState((prev) => ({
-        ...prev,
-        open: false,
-        formData: {
-          userId: "",
-          groupId: "",
-          frequency: "one_month",
-          startDate: new Date().toISOString().split("T")[0],
-          endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
-            .toISOString()
-            .split("T")[0],
-        },
-      }));
-      fetchSubscriptions(state.selectedUserId);
+      const data = await response.json();
+      if (data) {
+        showSnackbar("Subscription created successfully");
+        setDialogState((prev) => ({
+          ...prev,
+          open: false,
+          formData: {
+            userId: "",
+            groupId: "",
+            frequency: "one_month",
+            startDate: new Date().toISOString().split("T")[0],
+            endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+              .toISOString()
+              .split("T")[0],
+          },
+        }));
+        fetchSubscriptions(state.selectedUserId);
+      }
     } catch (error) {
       console.error("Error creating subscription:", error);
       showSnackbar(error.message || "Error creating subscription", "error");
@@ -398,26 +408,15 @@ function SubscriptionManagement() {
 
   const columns = [
     {
-      Header: "Name",
+      Header: "User",
       accessor: (row) => {
-        const user = row.user || state.users.find((u) => u.id === row.userId);
-        return user?.name || "N/A";
-      },
-    },
-    {
-      Header: "Mobile",
-      accessor: (row) => {
-        const user = row.user || state.users.find((u) => u.id === row.userId);
-        return user?.phoneNumber || "N/A";
+        const user = state.users.find((u) => u.id === row.userId);
+        return `${user?.name || "N/A"} (${user?.phoneNumber || "N/A"})`;
       },
     },
     {
       Header: "Group",
-      accessor: (row) => {
-        // Handle group lookup for both formats
-        const group = state.groups.find((g) => g.id === row.groupId);
-        return group?.name || row.groupId;
-      },
+      accessor: (row) => state.groups.find((g) => g.id === row.groupId)?.name || row.groupId,
     },
     {
       Header: "Frequency",
@@ -445,11 +444,22 @@ function SubscriptionManagement() {
     const init = async () => {
       await fetchUsers();
       await fetchGroups();
-      await fetchSubscriptions();
       setState((prev) => ({ ...prev, loading: false }));
     };
     init();
   }, []);
+
+  if (state.loading && state.users.length === 0) {
+    return (
+      <DashboardLayout>
+        <DashboardNavbar />
+        <MDBox pt={6} pb={3} display="flex" justifyContent="center">
+          <CircularProgress />
+        </MDBox>
+        <Footer />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -484,35 +494,39 @@ function SubscriptionManagement() {
                       onClick={() => setDialogState((prev) => ({ ...prev, open: true }))}
                       size="small"
                     >
-                      Add subscription
+                      Create Subscription
                     </Button>
-                    <Tooltip title="Export All">
-                      <IconButton
-                        onClick={() => handleExportExcel("all")}
-                        color="primary"
-                        size="small"
-                      >
-                        <DownloadIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Export Active Only">
-                      <IconButton
-                        onClick={() => handleExportExcel("active")}
-                        color="success"
-                        size="small"
-                      >
-                        <DownloadIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Export Inactive Only">
-                      <IconButton
-                        onClick={() => handleExportExcel("inactive")}
-                        color="error"
-                        size="small"
-                      >
-                        <DownloadIcon />
-                      </IconButton>
-                    </Tooltip>
+                    {state.selectedUserId && (
+                      <>
+                        <Tooltip title="Export All">
+                          <IconButton
+                            onClick={() => handleExportExcel("all")}
+                            color="primary"
+                            size="small"
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Export Active Only">
+                          <IconButton
+                            onClick={() => handleExportExcel("active")}
+                            color="success"
+                            size="small"
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Export Inactive Only">
+                          <IconButton
+                            onClick={() => handleExportExcel("inactive")}
+                            color="error"
+                            size="small"
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </>
+                    )}
                   </Box>
                 </MDBox>
               </MDBox>
@@ -529,15 +543,16 @@ function SubscriptionManagement() {
                       isOptionEqualToValue={(option, value) => option.id === value.id}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
+                  {/* <Grid item xs={12} sm={6} md={3}>
                     <TextField
                       label="Search Subscriptions"
                       value={state.searchTerm}
                       onChange={handleSearchChange}
                       fullWidth
                       size="small"
+                      disabled={!state.selectedUserId}
                     />
-                  </Grid>
+                  </Grid> */}
                   <Grid item xs={12} sm={6} md={2}>
                     <ToggleButtonGroup
                       value={state.statusFilter}
@@ -564,6 +579,7 @@ function SubscriptionManagement() {
                       }}
                     />
                   </Grid>
+
                   <Grid item xs={12} sm={6} md={2}>
                     <TextField
                       label="End Date"
@@ -573,7 +589,7 @@ function SubscriptionManagement() {
                       size="small"
                       fullWidth
                       inputProps={{
-                        min: state.dateRange.start,
+                        min: state.dateRange.start, // Prevent selecting an end date before start
                       }}
                       InputLabelProps={{
                         shrink: true,
@@ -582,27 +598,35 @@ function SubscriptionManagement() {
                   </Grid>
                 </Grid>
 
-                {state.loading ? (
-                  <MDBox p={3} display="flex" justifyContent="center">
-                    <CircularProgress />
-                  </MDBox>
-                ) : filteredSubscriptions.length > 0 ? (
-                  <DataTable
-                    table={{ columns, rows: filteredSubscriptions }}
-                    isSorted={false}
-                    entriesPerPage={false}
-                    showTotalEntries={false}
-                    noEndBorder
-                  />
+                {state.selectedUserId ? (
+                  state.loading ? (
+                    <MDBox p={3} display="flex" justifyContent="center">
+                      <CircularProgress />
+                    </MDBox>
+                  ) : filteredSubscriptions.length > 0 ? (
+                    <DataTable
+                      table={{ columns, rows: filteredSubscriptions }}
+                      isSorted={false}
+                      entriesPerPage={false}
+                      showTotalEntries={false}
+                      noEndBorder
+                    />
+                  ) : (
+                    <MDBox p={3} textAlign="center">
+                      <MDTypography variant="body1">
+                        {state.searchTerm ||
+                        state.statusFilter !== "all" ||
+                        state.dateRange.start ||
+                        state.dateRange.end
+                          ? "No matching subscriptions found"
+                          : "No subscriptions found for this user"}
+                      </MDTypography>
+                    </MDBox>
+                  )
                 ) : (
                   <MDBox p={3} textAlign="center">
                     <MDTypography variant="body1">
-                      {state.searchTerm ||
-                      state.statusFilter !== "all" ||
-                      state.dateRange.start ||
-                      state.dateRange.end
-                        ? "No matching subscriptions found"
-                        : "No subscriptions available"}
+                      Please select a user to view subscriptions
                     </MDTypography>
                   </MDBox>
                 )}
@@ -613,6 +637,7 @@ function SubscriptionManagement() {
       </MDBox>
       <Footer />
 
+      {/* Create Subscription Dialog */}
       <Dialog
         open={dialogState.open}
         onClose={() =>
@@ -692,6 +717,7 @@ function SubscriptionManagement() {
                   value={dialogState.formData.frequency}
                   onChange={handleInputChange}
                   label="Frequency"
+                  sx={{ width: 300, height: 35 }}
                 >
                   <MenuItem value="one_month">One Month</MenuItem>
                   <MenuItem value="two_month">Two Months</MenuItem>
@@ -758,7 +784,13 @@ function SubscriptionManagement() {
           >
             Cancel
           </Button>
-          <Button onClick={handleCreateSubscription} color="error" variant="contained" size="small">
+          <Button
+            onClick={handleCreateSubscription}
+            color="error"
+            variant="contained"
+            size="small"
+            disabled={!dialogState.formData.userId || !dialogState.formData.groupId}
+          >
             Create
           </Button>
         </DialogActions>

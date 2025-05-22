@@ -189,7 +189,7 @@ function QuizResults() {
     { Header: "Rank", accessor: "rank", Cell: RankCell },
     {
       Header: "Participant",
-      accessor: (row) => `${row.user?.name || "Unknown"} (${row.user?.email || "No email"})`,
+      accessor: (row) => `${row.user?.name || "Unknown"} (${row.user?.phoneNumber || "No phone"})`,
     },
     { Header: "Score", accessor: "totalScore" },
     { Header: "Correct Answers", accessor: "correctAnswers" },
@@ -199,7 +199,7 @@ function QuizResults() {
   const participantsColumns = [
     {
       Header: "Participant",
-      accessor: (row) => `${row.user?.name || "Unknown"} (${row.user?.email || "No email"})`,
+      accessor: (row) => `${row.user?.name || "Unknown"} (${row.user?.phoneNumber || "No Phone"})`,
     },
     { Header: "Score", accessor: "totalScore" },
     { Header: "Correct Answers", accessor: "correctAnswers" },
