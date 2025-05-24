@@ -328,7 +328,7 @@ function SubscriptionOrders() {
                       exclusive
                       onChange={handleStatusFilterChange}
                       aria-label="status"
-                      sx={{ width: 100, height: 35 }}
+                      sx={{ width: 50, height: 35 }}
                     >
                       <ToggleButton value="all">All</ToggleButton>
                       <ToggleButton value="active">Active</ToggleButton>
