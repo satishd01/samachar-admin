@@ -60,6 +60,7 @@ function QuizResults() {
       participants: [],
     },
     loading: false,
+    calculating: false,
     currentPage: 1,
     totalPages: 1,
     snackbar: {
@@ -165,6 +166,46 @@ function QuizResults() {
     }
   };
 
+  const calculateWinners = async () => {
+    if (!state.selectedQuiz) {
+      showSnackbar("Please select a quiz first", "error");
+      return;
+    }
+
+    try {
+      setState((prev) => ({ ...prev, calculating: true }));
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showSnackbar("No token found, please login again", "error");
+        return;
+      }
+
+      const response = await fetch(
+        `${BASE_URL}/api/quizzes/${state.selectedQuiz}/calculate-winners`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        showSnackbar(data.message || "Winners calculated successfully");
+        // Refresh the results after calculation
+        fetchQuizResults(state.selectedQuiz);
+      } else {
+        throw new Error(data.message || "Error calculating winners");
+      }
+    } catch (error) {
+      console.error("Error calculating winners:", error);
+      showSnackbar(error.message || "Error calculating winners", "error");
+    } finally {
+      setState((prev) => ({ ...prev, calculating: false }));
+    }
+  };
+
   const handleQuizChange = (e) => {
     const quizId = e.target.value;
     if (quizId) {
@@ -267,6 +308,20 @@ function QuizResults() {
                         ))}
                       </Select>
                     </FormControl>
+                    {state.selectedQuiz && (
+                      <Button
+                        variant="contained"
+                        color="error"
+                        onClick={calculateWinners}
+                        disabled={state.calculating}
+                      >
+                        {state.calculating ? (
+                          <CircularProgress size={24} color="inherit" />
+                        ) : (
+                          "Calculate Winners"
+                        )}
+                      </Button>
+                    )}
                   </MDBox>
                 </MDBox>
               </MDBox>
@@ -276,13 +331,6 @@ function QuizResults() {
                     {selectedQuizDetails && (
                       <MDBox px={3} pb={2}>
                         <MDTypography variant="h5">{selectedQuizDetails.title}</MDTypography>
-                        {/* <MDTypography variant="body2" color="textSecondary">
-                          {selectedQuizDetails.description}
-                        </MDTypography>
-                        <MDTypography variant="body2">
-                          {new Date(selectedQuizDetails.startTime).toLocaleString()} -{" "}
-                          {new Date(selectedQuizDetails.endTime).toLocaleString()}
-                        </MDTypography> */}
                         <StatusCell value={selectedQuizDetails.isActive} />
                       </MDBox>
                     )}
