@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Button,
   Dialog,
@@ -20,6 +20,7 @@ import {
   Autocomplete,
   ToggleButtonGroup,
   ToggleButton,
+  Pagination,
 } from "@mui/material";
 import PropTypes from "prop-types";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -32,8 +33,10 @@ import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import * as XLSX from "xlsx";
+import dayjs from "dayjs";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const DEFAULT_PAGE_SIZE = 10;
 
 const StatusCell = ({ value }) => (
   <Chip label={value ? "Active" : "Inactive"} color={value ? "success" : "error"} size="small" />
@@ -60,6 +63,11 @@ function SubscriptionManagement() {
       message: "",
       severity: "success",
     },
+    pagination: {
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: 0,
+    },
   });
 
   const [dialogState, setDialogState] = useState({
@@ -68,8 +76,8 @@ function SubscriptionManagement() {
       userId: "",
       groupId: "",
       frequency: "one_month",
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split("T")[0],
+      startDate: dayjs().format("YYYY-MM-DD"),
+      endDate: dayjs().add(1, "month").format("YYYY-MM-DD"),
     },
     formErrors: {
       userId: false,
@@ -153,53 +161,95 @@ function SubscriptionManagement() {
     }
   };
 
-  const fetchSubscriptions = async (userId = "") => {
-    try {
-      setState((prev) => ({ ...prev, loading: true }));
-      const token = localStorage.getItem("token");
-      if (!token) {
-        showSnackbar("No token found, please login again", "error");
-        return;
+  const fetchSubscriptions = useCallback(
+    async (userId = "", page = 1) => {
+      try {
+        setState((prev) => ({ ...prev, loading: true }));
+        const token = localStorage.getItem("token");
+        if (!token) {
+          showSnackbar("No token found, please login again", "error");
+          return;
+        }
+
+        let url;
+        if (userId) {
+          // Specific user endpoint - no pagination or filters
+          url = `${BASE_URL}/api/subscriptions/${userId}`;
+        } else {
+          // General endpoint with pagination and filters
+          const params = new URLSearchParams();
+          params.append("page", page);
+          params.append("pageSize", DEFAULT_PAGE_SIZE);
+
+          if (state.dateRange.start) {
+            params.append("startDate", state.dateRange.start);
+          }
+
+          if (state.dateRange.end) {
+            params.append("endDate", state.dateRange.end);
+          }
+
+          url = `${BASE_URL}/api/subscriptions?${params.toString()}`;
+        }
+
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch subscriptions");
+        }
+
+        const data = await response.json();
+
+        // Normalize the data structure
+        const subscriptions = Array.isArray(data)
+          ? data
+          : data.data
+            ? data.data
+            : data.subscriptions || [];
+
+        setState((prev) => ({
+          ...prev,
+          subscriptions: subscriptions.map((sub) => ({
+            ...sub,
+            userId: sub.userId || sub.user?.id,
+          })),
+          loading: false,
+          pagination: userId
+            ? {
+                currentPage: 1,
+                totalPages: 1,
+                totalItems: subscriptions.length,
+              }
+            : {
+                currentPage: data.currentPage || 1,
+                totalPages: data.totalPages || 1,
+                totalItems: data.totalItems || subscriptions.length,
+              },
+        }));
+      } catch (error) {
+        console.error("Error fetching subscriptions:", error);
+        showSnackbar(error.message || "Error fetching subscriptions", "error");
+        setState((prev) => ({ ...prev, loading: false }));
       }
-
-      const url = userId
-        ? `${BASE_URL}/api/subscriptions/${userId}`
-        : `${BASE_URL}/api/subscriptions`;
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch subscriptions");
-      }
-
-      const data = await response.json();
-
-      // Normalize the data structure
-      const subscriptions = Array.isArray(data) ? data : data.subscriptions || [];
-
-      setState((prev) => ({
-        ...prev,
-        subscriptions: subscriptions.map((sub) => ({
-          ...sub,
-          // Ensure userId is available even if user object exists
-          userId: sub.userId || sub.user?.id,
-        })),
-        loading: false,
-      }));
-    } catch (error) {
-      console.error("Error fetching subscriptions:", error);
-      showSnackbar(error.message || "Error fetching subscriptions", "error");
-      setState((prev) => ({ ...prev, loading: false }));
-    }
-  };
+    },
+    [state.dateRange.start, state.dateRange.end]
+  );
 
   const handleUserChange = (event, newValue) => {
     const userId = newValue?.id || "";
-    setState((prev) => ({ ...prev, selectedUserId: userId }));
+    setState((prev) => ({
+      ...prev,
+      selectedUserId: userId,
+      pagination: {
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+      },
+    }));
     fetchSubscriptions(userId);
   };
 
@@ -214,18 +264,40 @@ function SubscriptionManagement() {
   };
 
   const handleDateRangeChange = (name, date) => {
+    const newDateRange = {
+      ...state.dateRange,
+      [name]: date,
+    };
+
     setState((prev) => ({
       ...prev,
-      dateRange: {
-        ...prev.dateRange,
-        [name]: date,
+      dateRange: newDateRange,
+    }));
+
+    // Only refetch general subscriptions when date changes
+    if (!state.selectedUserId) {
+      fetchSubscriptions();
+    }
+  };
+
+  const handlePageChange = (event, page) => {
+    setState((prev) => ({
+      ...prev,
+      pagination: {
+        ...prev.pagination,
+        currentPage: page,
       },
     }));
+    // Only fetch with pagination for general subscriptions
+    if (!state.selectedUserId) {
+      fetchSubscriptions("", page);
+    }
   };
 
   const filteredSubscriptions = useMemo(() => {
     let result = state.subscriptions;
 
+    // Apply client-side filters (search and status)
     if (state.searchTerm) {
       result = result.filter((sub) => {
         const groupName = state.groups.find((g) => g.id === sub.groupId)?.name?.toLowerCase() || "";
@@ -244,22 +316,8 @@ function SubscriptionManagement() {
       );
     }
 
-    if (state.dateRange.start) {
-      result = result.filter((sub) => new Date(sub.startDate) >= new Date(state.dateRange.start));
-    }
-    if (state.dateRange.end) {
-      result = result.filter((sub) => new Date(sub.endDate) <= new Date(state.dateRange.end));
-    }
-
     return result;
-  }, [
-    state.subscriptions,
-    state.searchTerm,
-    state.statusFilter,
-    state.dateRange,
-    state.groups,
-    state.users,
-  ]);
+  }, [state.subscriptions, state.searchTerm, state.statusFilter, state.groups, state.users]);
 
   const handleExportExcel = (type = "all") => {
     let dataToExport = filteredSubscriptions;
@@ -277,7 +335,6 @@ function SubscriptionManagement() {
 
     const worksheet = XLSX.utils.json_to_sheet(
       dataToExport.map((sub) => {
-        // Handle both formats for user data
         const user = sub.user || state.users.find((u) => u.id === sub.userId);
         const group = state.groups.find((g) => g.id === sub.groupId);
 
@@ -286,8 +343,8 @@ function SubscriptionManagement() {
           "User Phone": user?.phoneNumber || "N/A",
           "Group Name": group?.name || "N/A",
           Frequency: sub.frequency,
-          "Start Date": new Date(sub.startDate).toLocaleDateString(),
-          "End Date": new Date(sub.endDate).toLocaleDateString(),
+          "Start Date": dayjs(sub.startDate).format("DD/MM/YYYY"),
+          "End Date": dayjs(sub.endDate).format("DD/MM/YYYY"),
           Status: sub.isActive ? "Active" : "Inactive",
         };
       })
@@ -295,7 +352,7 @@ function SubscriptionManagement() {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Subscriptions");
-    XLSX.writeFile(workbook, `subscriptions_${type}.xlsx`);
+    XLSX.writeFile(workbook, `subscriptions_${type}_${dayjs().format("YYYY-MM-DD")}.xlsx`);
   };
 
   const validateForm = () => {
@@ -305,7 +362,7 @@ function SubscriptionManagement() {
       startDate: !dialogState.formData.startDate,
       endDate:
         !dialogState.formData.endDate ||
-        new Date(dialogState.formData.endDate) <= new Date(dialogState.formData.startDate),
+        dayjs(dialogState.formData.endDate).isBefore(dayjs(dialogState.formData.startDate)),
     };
 
     setDialogState((prev) => ({
@@ -354,10 +411,8 @@ function SubscriptionManagement() {
           userId: "",
           groupId: "",
           frequency: "one_month",
-          startDate: new Date().toISOString().split("T")[0],
-          endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
-            .toISOString()
-            .split("T")[0],
+          startDate: dayjs().format("YYYY-MM-DD"),
+          endDate: dayjs().add(1, "month").format("YYYY-MM-DD"),
         },
       }));
       fetchSubscriptions(state.selectedUserId);
@@ -414,7 +469,6 @@ function SubscriptionManagement() {
     {
       Header: "Group",
       accessor: (row) => {
-        // Handle group lookup for both formats
         const group = state.groups.find((g) => g.id === row.groupId);
         return group?.name || row.groupId;
       },
@@ -427,12 +481,12 @@ function SubscriptionManagement() {
     {
       Header: "Start Date",
       accessor: "startDate",
-      Cell: ({ value }) => new Date(value).toLocaleDateString(),
+      Cell: ({ value }) => dayjs(value).format("DD/MM/YYYY"),
     },
     {
       Header: "End Date",
       accessor: "endDate",
-      Cell: ({ value }) => new Date(value).toLocaleDateString(),
+      Cell: ({ value }) => dayjs(value).format("DD/MM/YYYY"),
     },
     {
       Header: "Status",
@@ -446,10 +500,9 @@ function SubscriptionManagement() {
       await fetchUsers();
       await fetchGroups();
       await fetchSubscriptions();
-      setState((prev) => ({ ...prev, loading: false }));
     };
     init();
-  }, []);
+  }, [fetchSubscriptions]);
 
   return (
     <DashboardLayout>
@@ -555,12 +608,15 @@ function SubscriptionManagement() {
                     <TextField
                       label="Start Date"
                       type="date"
-                      value={state.dateRange.start}
+                      value={state.dateRange.start || ""}
                       onChange={(e) => handleDateRangeChange("start", e.target.value)}
                       size="small"
                       fullWidth
                       InputLabelProps={{
                         shrink: true,
+                      }}
+                      inputProps={{
+                        max: state.dateRange.end || undefined,
                       }}
                     />
                   </Grid>
@@ -568,15 +624,15 @@ function SubscriptionManagement() {
                     <TextField
                       label="End Date"
                       type="date"
-                      value={state.dateRange.end}
+                      value={state.dateRange.end || ""}
                       onChange={(e) => handleDateRangeChange("end", e.target.value)}
                       size="small"
                       fullWidth
-                      inputProps={{
-                        min: state.dateRange.start,
-                      }}
                       InputLabelProps={{
                         shrink: true,
+                      }}
+                      inputProps={{
+                        min: state.dateRange.start || undefined,
                       }}
                     />
                   </Grid>
@@ -587,13 +643,26 @@ function SubscriptionManagement() {
                     <CircularProgress />
                   </MDBox>
                 ) : filteredSubscriptions.length > 0 ? (
-                  <DataTable
-                    table={{ columns, rows: filteredSubscriptions }}
-                    isSorted={false}
-                    entriesPerPage={false}
-                    showTotalEntries={false}
-                    noEndBorder
-                  />
+                  <>
+                    <DataTable
+                      table={{ columns, rows: filteredSubscriptions }}
+                      isSorted={false}
+                      entriesPerPage={false}
+                      showTotalEntries={false}
+                      noEndBorder
+                    />
+                    {/* Only show pagination when viewing general subscriptions */}
+                    {!state.selectedUserId && (
+                      <MDBox display="flex" justifyContent="center" p={2}>
+                        <Pagination
+                          count={state.pagination.totalPages}
+                          page={state.pagination.currentPage}
+                          onChange={handlePageChange}
+                          color="primary"
+                        />
+                      </MDBox>
+                    )}
+                  </>
                 ) : (
                   <MDBox p={3} textAlign="center">
                     <MDTypography variant="body1">
@@ -623,10 +692,8 @@ function SubscriptionManagement() {
               userId: "",
               groupId: "",
               frequency: "one_month",
-              startDate: new Date().toISOString().split("T")[0],
-              endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
-                .toISOString()
-                .split("T")[0],
+              startDate: dayjs().format("YYYY-MM-DD"),
+              endDate: dayjs().add(1, "month").format("YYYY-MM-DD"),
             },
           }))
         }
@@ -747,10 +814,8 @@ function SubscriptionManagement() {
                   userId: "",
                   groupId: "",
                   frequency: "one_month",
-                  startDate: new Date().toISOString().split("T")[0],
-                  endDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
-                    .toISOString()
-                    .split("T")[0],
+                  startDate: dayjs().format("YYYY-MM-DD"),
+                  endDate: dayjs().add(1, "month").format("YYYY-MM-DD"),
                 },
               }))
             }

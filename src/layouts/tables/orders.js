@@ -323,7 +323,7 @@ function SubscriptionOrders() {
                       sx={{ width: 300 }}
                       size="small"
                     />
-                    <ToggleButtonGroup
+                    {/* <ToggleButtonGroup
                       value={state.statusFilter}
                       exclusive
                       onChange={handleStatusFilterChange}
@@ -333,7 +333,7 @@ function SubscriptionOrders() {
                       <ToggleButton value="all">All</ToggleButton>
                       <ToggleButton value="active">Active</ToggleButton>
                       <ToggleButton value="inactive">Inactive</ToggleButton>
-                    </ToggleButtonGroup>
+                    </ToggleButtonGroup> */}
                     <ToggleButtonGroup
                       value={state.frequencyFilter}
                       exclusive
