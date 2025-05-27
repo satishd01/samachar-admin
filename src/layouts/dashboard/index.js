@@ -1,13 +1,32 @@
 // @mui material components
 import Grid from "@mui/material/Grid";
+import Card from "@mui/material/Card";
 import MDBox from "components/MDBox";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatisticsCard";
 
+// Recharts components
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+
 // Data
 import { useEffect, useState } from "react";
+
+// Custom colors
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
 function Dashboard() {
   const [counts, setCounts] = useState({
@@ -17,6 +36,28 @@ function Dashboard() {
   });
 
   const [loading, setLoading] = useState(true);
+
+  // Prepare chart data
+  const groupsChartData = [
+    { name: "Paid", value: counts.groups.paid },
+    { name: "Free", value: counts.groups.free },
+  ];
+
+  const usersChartData = [
+    { name: "Verified", value: counts.users.verified },
+    { name: "Unverified", value: counts.users.unverified },
+  ];
+
+  const subscriptionsChartData = [
+    { name: "Active", value: counts.subscriptions.active },
+    { name: "Expired", value: counts.subscriptions.expired },
+  ];
+
+  const comparisonData = [
+    { name: "Groups", total: counts.groups.total },
+    { name: "Users", total: counts.users.total },
+    { name: "Subscriptions", total: counts.subscriptions.total },
+  ];
 
   // Fetch API Data
   useEffect(() => {
@@ -64,8 +105,8 @@ function Dashboard() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox py={3}>
-        <Grid container spacing={3}>
-          {/* Groups Card */}
+        {/* Summary Cards */}
+        <Grid container spacing={3} mb={4}>
           <Grid item xs={12} md={4}>
             <MDBox
               mb={1.5}
@@ -83,14 +124,13 @@ function Dashboard() {
                 count={counts.groups.total}
                 percentage={{
                   color: "success",
-                  amount: `${counts.groups.paid}`,
+                  amount: `${Math.round((counts.groups.paid / counts.groups.total) * 100)}%`,
                   label: `Paid Groups`,
                 }}
               />
             </MDBox>
           </Grid>
 
-          {/* Users Card */}
           <Grid item xs={12} md={4}>
             <MDBox
               mb={1.5}
@@ -108,14 +148,13 @@ function Dashboard() {
                 count={counts.users.total}
                 percentage={{
                   color: "success",
-                  amount: `${counts.users.verified}`,
+                  amount: `${Math.round((counts.users.verified / counts.users.total) * 100)}%`,
                   label: `Verified Users`,
                 }}
               />
             </MDBox>
           </Grid>
 
-          {/* Subscriptions Card */}
           <Grid item xs={12} md={4}>
             <MDBox
               mb={1.5}
@@ -133,11 +172,123 @@ function Dashboard() {
                 count={counts.subscriptions.total}
                 percentage={{
                   color: "success",
-                  amount: `${counts.subscriptions.active}`,
+                  amount: `${Math.round((counts.subscriptions.active / counts.subscriptions.total) * 100)}%`,
                   label: `Active Subscriptions`,
                 }}
               />
             </MDBox>
+          </Grid>
+        </Grid>
+
+        {/* Charts Section */}
+        <Grid container spacing={3}>
+          {/* Groups Pie Chart */}
+          <Grid item xs={12} md={6} lg={4}>
+            <Card sx={{ height: "100%", p: 2, "&:hover": { boxShadow: 3 } }}>
+              <MDBox mb={2}>
+                <h3>Groups Distribution</h3>
+              </MDBox>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={groupsChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {groupsChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+          </Grid>
+
+          {/* Users Pie Chart */}
+          <Grid item xs={12} md={6} lg={4}>
+            <Card sx={{ height: "100%", p: 2, "&:hover": { boxShadow: 3 } }}>
+              <MDBox mb={2}>
+                <h3>Users Verification Status</h3>
+              </MDBox>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={usersChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {usersChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+          </Grid>
+
+          {/* Subscriptions Pie Chart */}
+          <Grid item xs={12} md={6} lg={4}>
+            <Card sx={{ height: "100%", p: 2, "&:hover": { boxShadow: 3 } }}>
+              <MDBox mb={2}>
+                <h3>Subscriptions Status</h3>
+              </MDBox>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={subscriptionsChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {subscriptionsChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+          </Grid>
+
+          {/* Comparison Bar Chart */}
+          <Grid item xs={12}>
+            <Card sx={{ p: 2, "&:hover": { boxShadow: 3 } }}>
+              <MDBox mb={2}>
+                <h3>Total Counts Comparison</h3>
+              </MDBox>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={comparisonData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="total" fill="#8884d8" name="Total Count" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
           </Grid>
         </Grid>
       </MDBox>
