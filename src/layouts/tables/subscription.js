@@ -569,8 +569,8 @@ function SubscriptionManagement() {
                   </Box>
                 </MDBox>
               </MDBox>
-              <MDBox pt={2} px={2}>
-                <Grid container spacing={2}>
+              <MDBox pt={2} px={2} >
+                <Grid container spacing={2}mb={3}>
                   <Grid item xs={12} sm={6} md={3}>
                     <Autocomplete
                       options={state.users}
@@ -591,7 +591,7 @@ function SubscriptionManagement() {
                       size="small"
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6} md={2}>
+                  {/* <Grid item xs={12} sm={6} md={2}>
                     <ToggleButtonGroup
                       value={state.statusFilter}
                       exclusive
@@ -603,7 +603,7 @@ function SubscriptionManagement() {
                       <ToggleButton value="active">Active</ToggleButton>
                       <ToggleButton value="inactive">Inactive</ToggleButton>
                     </ToggleButtonGroup>
-                  </Grid>
+                  </Grid> */}
                   <Grid item xs={12} sm={6} md={2}>
                     <TextField
                       label="Start Date"
