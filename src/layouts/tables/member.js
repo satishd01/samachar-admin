@@ -28,7 +28,7 @@ import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import { Download as DownloadIcon } from "@mui/icons-material";
+import { Download as DownloadIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
@@ -45,6 +45,11 @@ function GroupMembersManagement() {
       open: false,
       message: "",
       severity: "success",
+    },
+    deleteDialog: {
+      open: false,
+      member: null,
+      loading: false,
     },
   });
 
@@ -141,6 +146,73 @@ function GroupMembersManagement() {
     }
   };
 
+  const handleDeleteMember = async () => {
+    try {
+      setState((prev) => ({
+        ...prev,
+        deleteDialog: { ...prev.deleteDialog, loading: true },
+      }));
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showSnackbar("No token found, please login again", "error");
+        return;
+      }
+
+      const { groupId, userId } = state.deleteDialog.member;
+      const response = await fetch(`${BASE_URL}/api/groups/${groupId}/members/${userId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        showSnackbar("Member removed successfully", "success");
+        fetchGroupMembers(state.selectedGroupId); // Refresh members list
+      } else {
+        throw new Error(data.error || "Failed to delete member");
+      }
+    } catch (error) {
+      console.error("Error deleting member:", error);
+      showSnackbar(error.message || "Error deleting member", "error");
+    } finally {
+      setState((prev) => ({
+        ...prev,
+        deleteDialog: {
+          ...prev.deleteDialog,
+          open: false,
+          loading: false,
+          member: null,
+        },
+      }));
+    }
+  };
+
+  const openDeleteDialog = (member) => {
+    setState((prev) => ({
+      ...prev,
+      deleteDialog: {
+        ...prev.deleteDialog,
+        open: true,
+        member,
+      },
+    }));
+  };
+
+  const closeDeleteDialog = () => {
+    setState((prev) => ({
+      ...prev,
+      deleteDialog: {
+        ...prev.deleteDialog,
+        open: false,
+        member: null,
+      },
+    }));
+  };
+
   const handleGroupChange = (e) => {
     const groupId = e.target.value;
     setState((prev) => ({ ...prev, selectedGroupId: groupId }));
@@ -201,30 +273,51 @@ function GroupMembersManagement() {
   const columns = [
     {
       Header: "User",
-      accessor: (row) => `${row.user?.name || "N/A"}`,
+      accessor: "user.name",
+      Cell: ({ row }) => (
+        <Box display="flex" alignItems="center">
+          <Avatar
+            src={row.original.user?.profileImage}
+            alt={row.original.user?.name}
+            sx={{ width: 36, height: 36, mr: 2 }}
+          />
+          <Box>
+            <MDTypography variant="button" fontWeight="medium">
+              {row.original.user?.name || "N/A"}
+            </MDTypography>
+          </Box>
+        </Box>
+      ),
     },
     {
       Header: "Phone Number",
-      accessor: (row) => `${row.user?.phoneNumber || "N/A"}`,
+      accessor: "user.phoneNumber",
+      Cell: ({ row }) => (
+        <MDTypography variant="caption" color="text">
+          {row.original.user?.phoneNumber || "N/A"}
+        </MDTypography>
+      ),
     },
     {
       Header: "Joined At",
       accessor: "joinedAt",
       Cell: ({ value }) => new Date(value).toLocaleString(),
     },
-    // {
-    //   Header: "Actions",
-    //   accessor: "actions",
-    //   Cell: ({ row }) => (
-    //     <Button
-    //       variant="contained"
-    //       color="error"
-    //       onClick={() => console.log("Remove member:", row.original.id)}
-    //     >
-    //       Remove
-    //     </Button>
-    //   ),
-    // },
+    {
+      Header: "Actions",
+      accessor: "actions",
+      Cell: ({ row }) => (
+        <Tooltip title="Remove member">
+          <IconButton
+            color="error"
+            onClick={() => openDeleteDialog(row.original)}
+            disabled={state.deleteDialog.loading}
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Tooltip>
+      ),
+    },
   ];
 
   useEffect(() => {
@@ -267,7 +360,7 @@ function GroupMembersManagement() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Group Members
+                    Group Members Management
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
                     <TextField
@@ -349,6 +442,29 @@ function GroupMembersManagement() {
       </MDBox>
       <Footer />
 
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={state.deleteDialog.open} onClose={closeDeleteDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Confirm Member Removal</DialogTitle>
+        <DialogContent>
+          <MDTypography variant="body1">
+            Are you sure you want to remove <strong>{state.deleteDialog.member?.user?.name}</strong>{" "}
+            from the group?
+          </MDTypography>
+          <MDTypography variant="caption" color="text">
+            This action cannot be undone.
+          </MDTypography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteDialog} disabled={state.deleteDialog.loading}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteMember} color="error" disabled={state.deleteDialog.loading}>
+            {state.deleteDialog.loading ? <CircularProgress size={24} /> : "Remove Member"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
       <Snackbar
         open={state.snackbar.open}
         autoHideDuration={6000}
@@ -374,6 +490,11 @@ GroupMembersManagement.propTypes = {
       userId: PropTypes.string.isRequired,
       groupId: PropTypes.string.isRequired,
       joinedAt: PropTypes.string.isRequired,
+      user: PropTypes.shape({
+        name: PropTypes.string,
+        phoneNumber: PropTypes.string,
+        profileImage: PropTypes.string,
+      }),
     }).isRequired,
   }).isRequired,
 };
