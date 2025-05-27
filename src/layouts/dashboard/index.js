@@ -10,101 +10,132 @@ import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatist
 import { useEffect, useState } from "react";
 
 function Dashboard() {
-  const [userCount, setUserCount] = useState(0);
-  const [orderCount, setOrderCount] = useState(0); // Added state for orders
-  const [milkPrices, setMilkPrices] = useState({ cowPrice: 0, buffaloPrice: 0 }); // Added state for milk prices
-  const [dashboardStats, setDashboardStats] = useState({
-    categories_all: 0,
-    categories_used: 0,
-    users: 0,
-    locations_all: 0,
-    locations_used: 0,
+  const [counts, setCounts] = useState({
+    groups: { total: 0, paid: 0, free: 0 },
+    users: { total: 0, verified: 0, unverified: 0 },
+    subscriptions: { total: 0, active: 0, expired: 0 },
   });
 
-  // Fetch Dashboard Stats
+  const [loading, setLoading] = useState(true);
+
+  // Fetch API Data
   useEffect(() => {
-    const fetchDashboardStats = async () => {
+    const fetchData = async () => {
       try {
-        const token = localStorage.getItem("ACCESS_TOKEN");
+        setLoading(true);
 
-        if (!token) {
-          console.error("No token found in localStorage.");
-          return;
-        }
-
-        const response = await fetch("http://46.202.166.150:8090/api/activities/dashboard/stats", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
+        const response = await fetch(
+          "https://safety.shellcode.cloud/api/dashboard/counts/detailed",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization:
+                "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI3NDg3ZGY0MC0yNDg3LTRmYTAtOGU5Ny1iOTFjYjJmODQxODkiLCJwaG9uZU51bWJlciI6IjkwMTYzNzEwODgiLCJ0b2tlbklkIjoiODMyMzI2ZmY5ZTRiZmE1ZmM5NjBjNmQ5NTMzZWM0YjciLCJpYXQiOjE3NDc5MTYzOTQsImV4cCI6MTc0ODUyMTE5NH0.cTAmVF8pDcpJFY2k5AuhCIl_TduhLebzYQN8o6UZio0",
+            },
+          }
+        );
         const data = await response.json();
-
-        // Example Response:
-        // { "categories_all": 18, "categories_used": 23, "users": 21, "locations_all": 5, "locations_used": 6626 }
-
-        setDashboardStats({
-          categories_all: data.categories_all,
-          categories_used: data.categories_used,
-          users: data.users,
-          locations_all: data.locations_all,
-          locations_used: data.locations_used,
-        });
+        if (data.success) {
+          setCounts(data.counts);
+        }
       } catch (error) {
-        console.error("Error fetching dashboard stats", error);
+        console.error("Error fetching data", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchDashboardStats();
+    fetchData();
   }, []);
 
-  // Render the dashboard with updated stats
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <DashboardNavbar />
+        <MDBox py={3} textAlign="center">
+          Loading dashboard data...
+        </MDBox>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox py={3}>
-        <Grid container spacing={3}></Grid>
-        {/* Displaying dashboard stats */}
-        <Grid container spacing={3} mt={3}>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
+        <Grid container spacing={3}>
+          {/* Groups Card */}
+          <Grid item xs={12} md={4}>
+            <MDBox
+              mb={1.5}
+              sx={{
+                "&:hover": {
+                  transform: "translateY(-5px)",
+                  transition: "transform 0.3s ease-in-out",
+                },
+              }}
+            >
+              <ComplexStatisticsCard
+                color="dark"
+                icon="groups"
+                title="Total Groups"
+                count={counts.groups.total}
+                percentage={{
+                  color: "success",
+                  amount: `${counts.groups.paid}`,
+                  label: `Paid Groups`,
+                }}
+              />
+            </MDBox>
+          </Grid>
+
+          {/* Users Card */}
+          <Grid item xs={12} md={4}>
+            <MDBox
+              mb={1.5}
+              sx={{
+                "&:hover": {
+                  transform: "translateY(-5px)",
+                  transition: "transform 0.3s ease-in-out",
+                },
+              }}
+            >
               <ComplexStatisticsCard
                 color="info"
-                icon="category"
-                title="users"
-                count={dashboardStats.categories_all}
+                icon="people"
+                title="Total Users"
+                count={counts.users.total}
+                percentage={{
+                  color: "success",
+                  amount: `${counts.users.verified}`,
+                  label: `Verified Users`,
+                }}
               />
             </MDBox>
           </Grid>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
-              <ComplexStatisticsCard
-                color="warning"
-                icon="subricption"
-                title="members"
-                count={dashboardStats.categories_used}
-              />
-            </MDBox>
-          </Grid>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
-              <ComplexStatisticsCard
-                color="primary"
-                icon="group"
-                title="groups"
-                count={dashboardStats.users}
-              />
-            </MDBox>
-          </Grid>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
+
+          {/* Subscriptions Card */}
+          <Grid item xs={12} md={4}>
+            <MDBox
+              mb={1.5}
+              sx={{
+                "&:hover": {
+                  transform: "translateY(-5px)",
+                  transition: "transform 0.3s ease-in-out",
+                },
+              }}
+            >
               <ComplexStatisticsCard
                 color="success"
-                icon="location_on"
-                title="orders"
-                count={dashboardStats.locations_all}
+                icon="subscriptions"
+                title="Total Subscriptions"
+                count={counts.subscriptions.total}
+                percentage={{
+                  color: "success",
+                  amount: `${counts.subscriptions.active}`,
+                  label: `Active Subscriptions`,
+                }}
               />
             </MDBox>
           </Grid>
