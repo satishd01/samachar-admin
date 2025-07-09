@@ -30,7 +30,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 
 function QuizManagement() {
   const navigate = useNavigate();

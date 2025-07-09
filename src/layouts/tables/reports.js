@@ -30,7 +30,7 @@ import IconButton from "@mui/material/IconButton";
 import CircularProgress from "@mui/material/CircularProgress";
 import EditIcon from "@mui/icons-material/Edit";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 
 const ReportsManagement = () => {
   const [state, setState] = useState({

@@ -22,7 +22,7 @@ import Icon from "@mui/material/Icon";
 import DownloadIcon from "@mui/icons-material/Download";
 
 // Base URL from environment or default
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 
 function Invoices() {
   const navigate = useNavigate();

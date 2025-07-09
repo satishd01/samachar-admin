@@ -26,7 +26,7 @@ import Alert from "@mui/material/Alert";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 
 const PaidCell = ({ value }) => (
   <Chip label={value ? "Paid" : "Free"} color={value ? "error" : "success"} size="small" />

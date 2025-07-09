@@ -47,7 +47,7 @@ function Basic() {
     };
 
     try {
-      const response = await fetch("https://safety.shellcode.cloud/api/admin/signin", {
+      const response = await fetch("https://samachar.chetakbooks.shop/api/admin/signin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

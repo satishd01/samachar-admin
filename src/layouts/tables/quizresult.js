@@ -28,7 +28,7 @@ import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 
 const StatusCell = ({ value }) => (
   <Chip label={value ? "Active" : "Inactive"} color={value ? "success" : "error"} size="small" />

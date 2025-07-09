@@ -66,7 +66,7 @@ function Dashboard() {
         setLoading(true);
 
         const response = await fetch(
-          "https://safety.shellcode.cloud/api/dashboard/counts/detailed",
+          "https://samachar.chetakbooks.shop/api/dashboard/counts/detailed",
           {
             method: "GET",
             headers: {

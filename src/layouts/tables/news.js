@@ -33,7 +33,7 @@ import { CloudUpload as CloudUploadIcon, Edit, Delete } from "@mui/icons-materia
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 const ITEMS_PER_PAGE = 5;
 
 const NewsItem = ({ item }) => (

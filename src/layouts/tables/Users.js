@@ -29,7 +29,7 @@ import {
   Tooltip,
 } from "@mui/material";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 const ITEMS_PER_PAGE_OPTIONS = [5, 10, 25, 50, 100];
 
 const initialFormData = {

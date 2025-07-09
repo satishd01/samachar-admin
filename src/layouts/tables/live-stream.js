@@ -26,7 +26,7 @@ import { Edit, Delete, Add } from "@mui/icons-material";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 
 function YouTubeLiveStreams() {
   const [state, setState] = useState({

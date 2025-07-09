@@ -32,7 +32,7 @@ import { Download as DownloadIcon, Delete as DeleteIcon } from "@mui/icons-mater
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 
 function GroupMembersManagement() {
   const [state, setState] = useState({

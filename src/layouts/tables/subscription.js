@@ -35,7 +35,7 @@ import Alert from "@mui/material/Alert";
 import * as XLSX from "xlsx";
 import dayjs from "dayjs";
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://safety.shellcode.cloud";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 const DEFAULT_PAGE_SIZE = 10;
 
 const StatusCell = ({ value }) => (
