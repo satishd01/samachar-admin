@@ -64,7 +64,7 @@ function Messages() {
       scriptName: "",
       actionType: "",
       target1: "",
-      target2: "",
+      target2: null,
       stopLoss: "",
       reason: "",
       discriminator: "https://commoditysamachar.com/disclosures-and-disclaimers/",
@@ -243,7 +243,7 @@ function Messages() {
       formDataToSend.append("scriptName", dialogState.formData.scriptName);
       formDataToSend.append("actionType", dialogState.formData.actionType);
       formDataToSend.append("target1", dialogState.formData.target1);
-      formDataToSend.append("target2", dialogState.formData.target2 || "");
+      formDataToSend.append("target2", dialogState.formData.target2);
       formDataToSend.append("stopLoss", dialogState.formData.stopLoss);
       formDataToSend.append("reason", dialogState.formData.reason);
       formDataToSend.append(
@@ -313,11 +313,15 @@ function Messages() {
       formDataToSend.append("scriptName", dialogState.formData.scriptName);
       formDataToSend.append("actionType", dialogState.formData.actionType);
       formDataToSend.append("target1", dialogState.formData.target1);
-      formDataToSend.append("target2", dialogState.formData.target2 || "");
+      formDataToSend.append(
+        "target2",
+        dialogState.formData.target2 === undefined ? null : dialogState.formData.target2 || null
+      );
+
       formDataToSend.append("stopLoss", dialogState.formData.stopLoss);
       formDataToSend.append("reason", dialogState.formData.reason);
       formDataToSend.append("share_message", dialogState.formData.share_message.toString());
-      formDataToSend.append("link", dialogState.formData.link || "");
+      formDataToSend.append("link", dialogState.formData.link);
 
       if (dialogState.formData.audioId) {
         formDataToSend.append("audioId", dialogState.formData.audioId);

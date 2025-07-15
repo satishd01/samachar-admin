@@ -458,7 +458,7 @@ function TransactionManagement() {
             
             <div class="amount-due">
               <div class="amount-label">Amount Due</div>
-              <div class="amount-value">${invoice.currency_symbol} ${invoice.amount_due.toFixed(2)}</div>
+              <div class="amount-value">${invoice.currency_symbol} ${(invoice.amount_due / 100).toFixed(2)}</div>
             </div>
             
             <div class="details">
@@ -497,9 +497,11 @@ function TransactionManagement() {
                       <div style="font-weight: 500;">${item.name}</div>
                       <div style="font-size: 12px; color: #6B7280; margin-top: 4px;">${item.description}</div>
                     </td>
-                    <td class="text-right">${invoice.currency_symbol} ${item.unit_amount.toFixed(2)}</td>
+                    <td class="text-right">${invoice.currency_symbol} ${(item.unit_amount / 100).toFixed(2)}
+</td>
                     <td class="text-right">${item.quantity}</td>
-                    <td class="text-right">${invoice.currency_symbol} ${item.amount.toFixed(2)}</td>
+                    <td class="text-right">${invoice.currency_symbol} ${(item.amount / 100).toFixed(2)}
+</td>
                   </tr>
                 `
                   )
@@ -507,7 +509,8 @@ function TransactionManagement() {
                 
                 <tr>
                   <td colspan="3" class="text-right text-bold">Subtotal</td>
-                  <td class="text-right text-bold">${invoice.currency_symbol} ${invoice.taxable_amount.toFixed(2)}</td>
+                  <td class="text-right text-bold">${invoice.currency_symbol} ${(invoice.taxable_amount / 100).toFixed(2)}
+</td>
                 </tr>
                 
                 <tr>
@@ -522,7 +525,8 @@ function TransactionManagement() {
                 
                 <tr class="total-row">
                   <td colspan="3" class="text-right text-bold">Total</td>
-                  <td class="text-right text-bold">${invoice.currency_symbol} ${invoice.amount.toFixed(2)}</td>
+                  <td class="text-right text-bold">${invoice.currency_symbol} ${(invoice.amount / 100).toFixed(2)}
+</td>
                 </tr>
               </tbody>
             </table>

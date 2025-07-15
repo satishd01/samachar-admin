@@ -108,7 +108,6 @@ function NewsManagement() {
     expireAt: "",
     image: null,
     video: null,
-    thumbnail: null,
   });
 
   const [formErrors, setFormErrors] = useState({
@@ -231,7 +230,6 @@ function NewsManagement() {
       formDataToSend.append("expireAt", formData.expireAt);
       if (formData.image) formDataToSend.append("image", formData.image);
       if (formData.video) formDataToSend.append("video", formData.video);
-      if (formData.thumbnail) formDataToSend.append("thumbnail", formData.thumbnail);
 
       const response = await fetch(`${BASE_URL}/api/updated-news`, {
         method: "POST",
@@ -285,7 +283,6 @@ function NewsManagement() {
       formDataToSend.append("expireAt", formData.expireAt);
       if (formData.image) formDataToSend.append("image", formData.image);
       if (formData.video) formDataToSend.append("video", formData.video);
-      if (formData.thumbnail) formDataToSend.append("thumbnail", formData.thumbnail);
 
       const response = await fetch(`${BASE_URL}/api/updated-news/${dialogState.editingId}`, {
         method: "PUT",
@@ -320,7 +317,6 @@ function NewsManagement() {
       expireAt: "",
       image: null,
       video: null,
-      thumbnail: null,
     });
     setFormErrors({
       text: false,
@@ -393,7 +389,6 @@ function NewsManagement() {
       expireAt: newsItem.expireAt,
       image: null,
       video: null,
-      thumbnail: null,
     });
     setDialogState({
       open: true,
@@ -615,7 +610,6 @@ function NewsManagement() {
                     color="error"
                     variant="contained"
                     startIcon={<CloudUploadIcon />}
-                    sx={{ mb: 2 }}
                   >
                     Upload Video
                   </Button>
@@ -624,34 +618,6 @@ function NewsManagement() {
                   <Chip
                     label={formData.video.name}
                     onDelete={() => setFormData((prev) => ({ ...prev, video: null }))}
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </Box>
-
-              <Box sx={{ mt: 2 }}>
-                <input
-                  accept="image/*"
-                  type="file"
-                  id="newsThumbnail"
-                  name="thumbnail"
-                  onChange={handleFileChange}
-                  style={{ display: "none" }}
-                />
-                <label htmlFor="newsThumbnail">
-                  <Button
-                    component="span"
-                    color="error"
-                    variant="contained"
-                    startIcon={<CloudUploadIcon />}
-                  >
-                    Upload Thumbnail
-                  </Button>
-                </label>
-                {formData.thumbnail && (
-                  <Chip
-                    label={formData.thumbnail.name}
-                    onDelete={() => setFormData((prev) => ({ ...prev, thumbnail: null }))}
                     sx={{ ml: 1 }}
                   />
                 )}
