@@ -31,6 +31,7 @@ import { CloudUpload as CloudUploadIcon, Download as DownloadIcon } from "@mui/i
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import axios from "axios";
+import RichTextEditor from "./Richtexteditor";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 
@@ -519,14 +520,23 @@ function GroupsWithMessages() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Reason"
                 name="reason"
                 value={formData.reason}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
+              <Box sx={{ mt: 2, mb: 2 }}>
+                <MDTypography variant="body2" color="textSecondary" gutterBottom>
+                  Reason
+                </MDTypography>
+                <RichTextEditor
+                  value={formData.reason}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, reason: value }))}
+                />
+              </Box>
               <TextField
                 label="Disclaimer"
                 name="discriminator"
