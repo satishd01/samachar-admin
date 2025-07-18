@@ -530,7 +530,7 @@ function GroupsWithMessages() {
               /> */}
               <Box sx={{ mt: 2, mb: 2 }}>
                 <MDTypography variant="body2" color="textSecondary" gutterBottom>
-                  Reason
+                  update
                 </MDTypography>
                 <RichTextEditor
                   value={formData.reason}

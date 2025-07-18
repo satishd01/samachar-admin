@@ -30,6 +30,7 @@ import DataTable from "examples/Tables/DataTable";
 import { CloudUpload as CloudUploadIcon, Edit, Delete } from "@mui/icons-material";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import RichTextEditor from "./Richtexteditor";
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://samachar.chetakbooks.shop";
 
@@ -566,7 +567,7 @@ function Messages() {
     { Header: "Time Frame", accessor: "timeFrame" },
     { Header: "Targets", accessor: (row) => `${row.target1} / ${row.target2 || "-"}` },
     { Header: "Stop Loss", accessor: "stopLoss" },
-    { Header: "Reason", accessor: "reason" },
+    { Header: "Update", accessor: "reason" },
     {
       Header: "Actions",
       accessor: "actions",
@@ -767,14 +768,32 @@ function Messages() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
-                label="Reason"
+              {/* <TextField
+                label="Update"
                 name="reason"
                 value={dialogState.formData.reason}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
+              <Box sx={{ mt: 2, mb: 2 }}>
+                <MDTypography variant="caption" display="block" gutterBottom>
+                  Update
+                </MDTypography>
+                <RichTextEditor
+                  value={dialogState.formData.reason}
+                  onChange={(value) => {
+                    setDialogState((prev) => ({
+                      ...prev,
+                      formData: {
+                        ...prev.formData,
+                        reason: value,
+                      },
+                    }));
+                  }}
+                  placeholder="Enter your update message..."
+                />
+              </Box>
               <TextField
                 label="Disclaimer"
                 name="discriminator"
