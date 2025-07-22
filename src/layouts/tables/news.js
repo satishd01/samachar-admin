@@ -210,14 +210,16 @@ function NewsManagement() {
 
   const validateForm = () => {
     const errors = {};
-
+    if (formData.video && !formData.thumbnail) {
+      errors.thumbnail = true;
+    }
     setFormErrors(errors);
     return !Object.values(errors).some(Boolean);
   };
 
   const handleCreateNews = async () => {
     if (!validateForm()) {
-      showSnackbar("Please fill all required fields correctly", "error");
+      showSnackbar("please provide thumbnail if vedeo selected", "error");
       return;
     }
 
@@ -271,7 +273,7 @@ function NewsManagement() {
 
   const handleUpdateNews = async () => {
     if (!validateForm() || !dialogState.editingId) {
-      showSnackbar("Please fill all required fields correctly", "error");
+      showSnackbar("please add thumbnail if vedeo selected", "error");
       return;
     }
 
